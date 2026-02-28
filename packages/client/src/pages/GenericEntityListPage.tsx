@@ -1,210 +1,422 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { useModelMeta } from "../hooks/useSchema";
-import { useEntityList, useEntityDelete } from "../hooks/useEntity";
+import {
+    useEntityList,
+    useEntityDelete,
+    useEntityBatchDelete,
+    useEntityUpdate,
+} from "../hooks/useEntity";
 import type { FieldMeta } from "@zenku/core";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Plus, Trash2, Download } from "lucide-react";
+import { toast } from "sonner";
+import DataTable from "@/components/DataTable";
+import ViewSwitcher, { type ViewMode } from "@/components/ViewSwitcher";
+import KanbanView from "@/components/renderers/KanbanView";
+import CalendarView from "@/components/renderers/CalendarView";
+import TreeListView from "@/components/renderers/TreeListView";
 
 interface Props {
-  entityName: string;
-  onNavigate: (path: string) => void;
+    entityName: string;
+    onNavigate: (path: string) => void;
 }
 
-function formatValue(value: unknown, field: FieldMeta): string {
-  if (value === null || value === undefined) return "-";
-  if (field.type === "Boolean") return value ? "Yes" : "No";
-  if (field.type === "DateTime") {
-    return new Date(value as string).toLocaleString();
-  }
-  if (field.type === "Float" || field.type === "Decimal") {
-    return Number(value).toLocaleString(undefined, {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
-  }
-  if (typeof value === "object") {
-    // Relation object — show name or id
-    const obj = value as Record<string, unknown>;
-    return (obj.name as string) || (obj.email as string) || (obj.id as string) || JSON.stringify(value);
-  }
-  return String(value);
-}
-
-export default function GenericEntityListPage({ entityName, onNavigate }: Props) {
-  const meta = useModelMeta(entityName);
-  const entityPath = entityName.charAt(0).toLowerCase() + entityName.slice(1);
-
-  const [page, setPage] = useState(1);
-  const [search, setSearch] = useState("");
-  const [sort, setSort] = useState("createdAt");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
-
-  const { data, isLoading, error } = useEntityList(entityPath, {
-    page,
-    pageSize: 20,
-    sort,
-    sortDir,
-    search: search || undefined,
-  });
-
-  const deleteMutation = useEntityDelete(entityPath);
-
-  if (!meta) return <div className="p-6">Loading schema...</div>;
-
-  // Determine visible columns: scalar non-id, non-timestamps, plus relation objects
-  const columns = meta.fields.filter(
-    (f) =>
-      !f.isId &&
-      f.name !== "createdAt" &&
-      f.name !== "updatedAt" &&
-      // Hide foreign key fields (show relation object instead)
-      !meta.fields.some(
-        (rel) => rel.isRelation && !rel.isList && f.name === rel.name + "Id",
-      ) &&
-      // Hide list relations
-      !f.isList,
-  );
-
-  const handleSort = (field: string) => {
-    if (sort === field) {
-      setSortDir(sortDir === "asc" ? "desc" : "asc");
-    } else {
-      setSort(field);
-      setSortDir("asc");
+function formatValue(value: unknown, field: FieldMeta): React.ReactNode {
+    if (value === null || value === undefined)
+        return <span className="text-muted-foreground">—</span>;
+    if (field.type === "Boolean") {
+        return (
+            <Badge variant={value ? "default" : "secondary"}>
+                {value ? "Yes" : "No"}
+            </Badge>
+        );
     }
-    setPage(1);
-  };
+    if (field.type === "DateTime") {
+        return new Date(value as string).toLocaleString();
+    }
+    if (field.type === "Float" || field.type === "Decimal") {
+        return Number(value).toLocaleString(undefined, {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+        });
+    }
+    if (typeof value === "object") {
+        const obj = value as Record<string, unknown>;
+        return (
+            (obj.name as string) ||
+            (obj.email as string) ||
+            (obj.id as string) ||
+            "—"
+        );
+    }
+    return String(value);
+}
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Delete this item?")) return;
-    deleteMutation.mutate(id);
-  };
+export default function GenericEntityListPage({
+    entityName,
+    onNavigate,
+}: Props) {
+    const { t } = useTranslation();
+    const meta = useModelMeta(entityName);
+    const entityPath =
+        entityName.charAt(0).toLowerCase() + entityName.slice(1);
 
-  return (
-    <div className="p-6">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-bold">{meta.plural}</h2>
-        <button
-          onClick={() => onNavigate(`/${entityPath}/new`)}
-          className="bg-gray-900 text-white px-4 py-2 rounded text-sm hover:bg-gray-800"
-        >
-          + New {entityName}
-        </button>
-      </div>
+    // ─── Available view modes from UiConfig ───────────────────────────────────
+    const availableViews = useMemo<ViewMode[]>(() => {
+        const views: ViewMode[] = ["list"];
+        if (meta?.ui?.kanban) views.push("kanban");
+        if (meta?.ui?.calendar) views.push("calendar");
+        if (meta?.ui?.tree) views.push("tree");
+        return views;
+    }, [meta]);
 
-      {/* Search */}
-      <div className="mb-4">
-        <input
-          type="text"
-          placeholder="Search..."
-          value={search}
-          onChange={(e) => {
-            setSearch(e.target.value);
-            setPage(1);
-          }}
-          className="border rounded px-3 py-1.5 text-sm w-64"
-        />
-      </div>
+    const storageKey = `zenku-view-${entityName}`;
+    const [viewMode, setViewMode] = useState<ViewMode>(() => {
+        const saved = sessionStorage.getItem(storageKey) as ViewMode | null;
+        return saved && availableViews.includes(saved) ? saved : "list";
+    });
 
-      {error && (
-        <div className="text-red-600 bg-red-50 p-3 rounded mb-4 text-sm">
-          {error.message}
-        </div>
-      )}
+    // Sync viewMode if availableViews changes (e.g. after meta loads)
+    useEffect(() => {
+        if (!availableViews.includes(viewMode)) {
+            setViewMode(availableViews[0]);
+        }
+    }, [availableViews, viewMode]);
 
-      {/* Table */}
-      <div className="bg-white rounded-lg border overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b bg-gray-50">
-              {columns.map((col) => (
-                <th
-                  key={col.name}
-                  className="text-left px-4 py-2 font-medium text-gray-600 cursor-pointer hover:text-gray-900 select-none"
-                  onClick={() => !col.isRelation && handleSort(col.name)}
-                >
-                  {col.name}
-                  {sort === col.name && (
-                    <span className="ml-1">{sortDir === "asc" ? "\u2191" : "\u2193"}</span>
-                  )}
-                </th>
-              ))}
-              <th className="px-4 py-2 w-24"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {isLoading ? (
-              <tr>
-                <td colSpan={columns.length + 1} className="px-4 py-8 text-center text-gray-400">
-                  Loading...
-                </td>
-              </tr>
-            ) : data?.data.length === 0 ? (
-              <tr>
-                <td colSpan={columns.length + 1} className="px-4 py-8 text-center text-gray-400">
-                  No records found
-                </td>
-              </tr>
-            ) : (
-              data?.data.map((row) => (
-                <tr
-                  key={row.id as string}
-                  className="border-b hover:bg-gray-50 cursor-pointer"
-                  onClick={() => onNavigate(`/${entityPath}/${row.id}`)}
-                >
-                  {columns.map((col) => (
-                    <td key={col.name} className="px-4 py-2">
-                      {formatValue(row[col.name], col)}
-                    </td>
-                  ))}
-                  <td className="px-4 py-2 text-right">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onNavigate(`/${entityPath}/${row.id}/edit`);
-                      }}
-                      className="text-gray-500 hover:text-gray-700 mr-2"
+    const isNonListView = viewMode !== "list";
+
+    // ─── List view state ──────────────────────────────────────────────────────
+    const uiDefaultSort = meta?.ui?.list?.defaultSort;
+
+    const [page, setPage] = useState(1);
+    const [search, setSearch] = useState("");
+    const [sort, setSort] = useState(uiDefaultSort?.field ?? "createdAt");
+    const [sortDir, setSortDir] = useState<"asc" | "desc">(
+        uiDefaultSort?.dir ?? "desc",
+    );
+    const [deleteId, setDeleteId] = useState<string | null>(null);
+
+    // Multi-select state
+    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+    const [showBatchDeleteDialog, setShowBatchDeleteDialog] = useState(false);
+
+    // Clear selection when filters or page change
+    useEffect(() => {
+        setSelectedIds(new Set());
+    }, [page, search, sort, sortDir]);
+
+    // ─── Data fetching ────────────────────────────────────────────────────────
+    const { data, isLoading } = useEntityList(entityPath, {
+        page,
+        pageSize: 20,
+        sort,
+        sortDir,
+        search: search || undefined,
+    });
+
+    // For non-list views: fetch all records (up to 500)
+    const { data: allData, isLoading: allDataLoading } = useEntityList(
+        entityPath,
+        { page: 1, pageSize: 500 },
+        { enabled: isNonListView },
+    );
+
+    // ─── Mutations ────────────────────────────────────────────────────────────
+    const deleteMutation = useEntityDelete(entityPath);
+    const batchDeleteMutation = useEntityBatchDelete(entityPath);
+    const updateMutation = useEntityUpdate(entityPath);
+
+    if (!meta) return null;
+
+    // ─── Column resolution ────────────────────────────────────────────────────
+    const uiColumns = meta.ui?.list?.columns;
+    const columns = uiColumns
+        ? uiColumns
+              .map((colName) => meta.fields.find((f) => f.name === colName))
+              .filter((f): f is NonNullable<typeof f> => f !== undefined)
+        : meta.fields.filter(
+              (f) =>
+                  !f.isId &&
+                  f.name !== "createdAt" &&
+                  f.name !== "updatedAt" &&
+                  !meta.fields.some(
+                      (rel) =>
+                          rel.isRelation &&
+                          !rel.isList &&
+                          f.name === rel.name + "Id",
+                  ) &&
+                  !f.isList,
+          );
+
+    // ─── Handlers ─────────────────────────────────────────────────────────────
+    const handleSort = (field: string) => {
+        if (sort === field) {
+            setSortDir(sortDir === "asc" ? "desc" : "asc");
+        } else {
+            setSort(field);
+            setSortDir("asc");
+        }
+        setPage(1);
+    };
+
+    const handleDelete = async () => {
+        if (!deleteId) return;
+        try {
+            await deleteMutation.mutateAsync(deleteId);
+            toast.success(t("toast.deleted", { entity: entityName }));
+        } catch {
+            toast.error(t("toast.deleteError", { entity: entityName }));
+        } finally {
+            setDeleteId(null);
+        }
+    };
+
+    const handleBatchDelete = async () => {
+        const ids = Array.from(selectedIds);
+        try {
+            const result = await batchDeleteMutation.mutateAsync(ids);
+            toast.success(t("toast.deletedMany", { count: (result as any).deleted }));
+            setSelectedIds(new Set());
+        } catch {
+            toast.error(t("toast.error"));
+        } finally {
+            setShowBatchDeleteDialog(false);
+        }
+    };
+
+    const toggleSelect = (id: string) => {
+        setSelectedIds((prev) => {
+            const next = new Set(prev);
+            next.has(id) ? next.delete(id) : next.add(id);
+            return next;
+        });
+    };
+
+    const toggleSelectAll = () => {
+        const allIds = (data?.data ?? []).map((r) => r.id as string);
+        setSelectedIds((prev) =>
+            prev.size === allIds.length ? new Set() : new Set(allIds),
+        );
+    };
+
+    const handleViewChange = (mode: ViewMode) => {
+        setViewMode(mode);
+        sessionStorage.setItem(storageKey, mode);
+    };
+
+    const handleKanbanUpdate = (id: string, newStatus: string) => {
+        const kanbanConfig = meta.ui?.kanban;
+        if (!kanbanConfig) return;
+        updateMutation.mutate(
+            { id, data: { [kanbanConfig.statusField]: newStatus } },
+            {
+                onSuccess: () =>
+                    toast.success(t("toast.statusUpdated")),
+                onError: () =>
+                    toast.error(t("toast.error")),
+            },
+        );
+    };
+
+    const exportUrl = `/api/${entityPath}/export?format=csv${search ? `&search=${encodeURIComponent(search)}` : ""}&sort=${sort}&sortDir=${sortDir}`;
+
+    return (
+        <div className="p-6 space-y-4">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+                <div>
+                    <h2 className="text-2xl font-semibold tracking-tight">
+                        {meta.plural}
+                    </h2>
+                    {data && viewMode === "list" && (
+                        <p className="text-sm text-muted-foreground mt-0.5">
+                            {t("list.records", { count: data.total })}
+                        </p>
+                    )}
+                </div>
+                <div className="flex items-center gap-2">
+                    <ViewSwitcher
+                        available={availableViews}
+                        current={viewMode}
+                        onChange={handleViewChange}
+                    />
+                    {viewMode === "list" && (
+                        <Button variant="outline" size="sm" asChild>
+                            <a href={exportUrl} download>
+                                <Download className="h-4 w-4 mr-1.5" />
+                                {t("common.export")}
+                            </a>
+                        </Button>
+                    )}
+                    <Button
+                        onClick={() => onNavigate(`/${entityPath}/new`)}
+                        size="sm"
+                        className="gap-1.5"
                     >
-                      Edit
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDelete(row.id as string);
-                      }}
-                      className="text-red-400 hover:text-red-600"
-                    >
-                      Del
-                    </button>
-                  </td>
-                </tr>
-              ))
+                        <Plus className="h-4 w-4" />
+                        {t("list.newRecord", { entity: entityName })}
+                    </Button>
+                </div>
+            </div>
+
+            {/* Search — list view only */}
+            {viewMode === "list" && (
+                <Input
+                    placeholder={`${t("common.search")} ${meta.plural.toLowerCase()}...`}
+                    value={search}
+                    onChange={(e) => {
+                        setSearch(e.target.value);
+                        setPage(1);
+                    }}
+                    className="max-w-sm"
+                />
             )}
-          </tbody>
-        </table>
-      </div>
 
-      {/* Pagination */}
-      {data && data.totalPages > 1 && (
-        <div className="flex items-center gap-2 mt-4 text-sm">
-          <button
-            disabled={page <= 1}
-            onClick={() => setPage(page - 1)}
-            className="px-3 py-1 border rounded disabled:opacity-30"
-          >
-            Prev
-          </button>
-          <span className="text-gray-500">
-            Page {data.page} of {data.totalPages} ({data.total} total)
-          </span>
-          <button
-            disabled={page >= data.totalPages}
-            onClick={() => setPage(page + 1)}
-            className="px-3 py-1 border rounded disabled:opacity-30"
-          >
-            Next
-          </button>
+            {/* Batch action bar — list view only */}
+            {viewMode === "list" && selectedIds.size > 0 && (
+                <div className="flex items-center gap-3 px-3 py-2 bg-muted rounded-md border">
+                    <span className="text-sm font-medium">
+                        {t("list.selected", { count: selectedIds.size })}
+                    </span>
+                    <Button
+                        variant="destructive"
+                        size="sm"
+                        className="gap-1.5"
+                        onClick={() => setShowBatchDeleteDialog(true)}
+                    >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        {t("list.deleteSelected")}
+                    </Button>
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setSelectedIds(new Set())}
+                    >
+                        {t("list.deselectAll")}
+                    </Button>
+                </div>
+            )}
+
+            {/* ── Renderer ─────────────────────────────────────────────────── */}
+
+            {viewMode === "kanban" && meta.ui?.kanban && (
+                <KanbanView
+                    rows={allData?.data ?? []}
+                    kanbanConfig={meta.ui.kanban}
+                    entityPath={entityPath}
+                    onNavigate={onNavigate}
+                    isLoading={allDataLoading}
+                    onUpdate={handleKanbanUpdate}
+                />
+            )}
+
+            {viewMode === "calendar" && meta.ui?.calendar && (
+                <CalendarView
+                    rows={allData?.data ?? []}
+                    calendarConfig={meta.ui.calendar}
+                    entityPath={entityPath}
+                    onNavigate={onNavigate}
+                    isLoading={allDataLoading}
+                />
+            )}
+
+            {viewMode === "tree" && meta.ui?.tree && (
+                <TreeListView
+                    rows={allData?.data ?? []}
+                    treeConfig={meta.ui.tree}
+                    entityPath={entityPath}
+                    onNavigate={onNavigate}
+                    isLoading={allDataLoading}
+                />
+            )}
+
+            {viewMode === "list" && (
+                <>
+                    <DataTable
+                        entityName={entityName}
+                        entityPath={entityPath}
+                        columns={columns}
+                        rows={data?.data ?? []}
+                        isLoading={isLoading}
+                        selectedIds={selectedIds}
+                        onToggleSelect={toggleSelect}
+                        onToggleSelectAll={toggleSelectAll}
+                        sortField={sort}
+                        sortDir={sortDir}
+                        onSort={handleSort}
+                        formatValue={formatValue}
+                        deleteId={deleteId}
+                        onDeleteRequest={setDeleteId}
+                        onDeleteCancel={() => setDeleteId(null)}
+                        onDeleteConfirm={handleDelete}
+                        onNavigate={onNavigate}
+                    />
+
+                    {/* Pagination */}
+                    {data && data.totalPages > 1 && (
+                        <div className="flex items-center gap-2 text-sm justify-end">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={page <= 1}
+                                onClick={() => setPage(page - 1)}
+                            >
+                                {t("list.previous")}
+                            </Button>
+                            <span className="text-muted-foreground px-2">
+                                {t("list.page", { page: data.page, total: data.totalPages })}
+                            </span>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={page >= data.totalPages}
+                                onClick={() => setPage(page + 1)}
+                            >
+                                {t("list.next")}
+                            </Button>
+                        </div>
+                    )}
+                </>
+            )}
+
+            {/* Batch delete confirmation dialog */}
+            <AlertDialog
+                open={showBatchDeleteDialog}
+                onOpenChange={setShowBatchDeleteDialog}
+            >
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>
+                            {t("list.confirmDeleteMany", { count: selectedIds.size, entity: selectedIds.size === 1 ? entityName : meta.plural })}
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                            {t("list.confirmDeleteManyDesc", { count: selectedIds.size })}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+                        <AlertDialogAction
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            onClick={handleBatchDelete}
+                        >
+                            {t("list.deleteCount", { count: selectedIds.size })}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
-      )}
-    </div>
-  );
+    );
 }

@@ -1,2 +1,5 @@
 [install]
 peer = false
+
+[run]
+bun-env = true

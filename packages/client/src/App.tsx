@@ -6,6 +6,8 @@ import LoginPage from "./pages/LoginPage";
 import GenericEntityListPage from "./pages/GenericEntityListPage";
 import GenericEntityFormPage from "./pages/GenericEntityFormPage";
 import GenericEntityDetailPage from "./pages/GenericEntityDetailPage";
+import { ErrorBoundary } from "./components/ErrorBoundary";
+import { Toaster } from "sonner";
 
 // Detect ejected pages via Vite's import.meta.glob (eager)
 const ejectedModules = import.meta.glob<{
@@ -165,8 +167,11 @@ function AppContent() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <AppContent />
+        <Toaster richColors position="bottom-right" />
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }

@@ -1,0 +1,620 @@
+openapi: 3.1.0
+info:
+  title: Zenku API
+  version: 1.0.0
+  description: |
+    Schema-driven REST API for Zenku. All CRUD endpoints are auto-generated from the
+    Prisma/ZenStack schema. Model names in paths use lowercase (e.g., `product`, `task`).
+
+servers:
+  - url: http://localhost:3001
+    description: Local development
+
+security:
+  - bearerAuth: []
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    apiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              example: UNAUTHORIZED
+            message:
+              type: string
+              example: Invalid credentials
+            details:
+              type: object
+              description: Field-level validation errors (422 only)
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        role:
+          type: string
+          enum: [ADMIN, USER]
+
+    TokenResponse:
+      type: object
+      properties:
+        token:
+          type: string
+          description: JWT access token (valid 15 minutes)
+        user:
+          $ref: '#/components/schemas/User'
+
+    PaginatedResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+        total:
+          type: integer
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        totalPages:
+          type: integer
+
+    SchemaResponse:
+      type: object
+      properties:
+        models:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              plural:
+                type: string
+              fields:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    type:
+                      type: string
+                      enum: [String, Int, Float, Boolean, DateTime, Json]
+                    isRequired:
+                      type: boolean
+                    isList:
+                      type: boolean
+                    isId:
+                      type: boolean
+                    isUnique:
+                      type: boolean
+                    isRelation:
+                      type: boolean
+                    isReadOnly:
+                      type: boolean
+                    relationModel:
+                      type: string
+              ui:
+                type: object
+                description: UiConfig (present only if a .ui.ts file exists for the model)
+                properties:
+                  label:
+                    type: string
+                  icon:
+                    type: string
+                  list:
+                    type: object
+                  form:
+                    type: object
+
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [ok, error]
+        db:
+          type: string
+          enum: [connected, disconnected]
+
+    Attachment:
+      type: object
+      properties:
+        id:
+          type: string
+        filename:
+          type: string
+        storedName:
+          type: string
+        mimeType:
+          type: string
+        size:
+          type: integer
+        entityModel:
+          type: string
+          nullable: true
+        entityId:
+          type: string
+          nullable: true
+        url:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    AiTool:
+      type: object
+      properties:
+        name:
+          type: string
+          example: list_Product
+        description:
+          type: string
+        parameters:
+          type: object
+          description: JSON Schema for tool parameters
+
+paths:
+  # ── Health ──────────────────────────────────────────────────────────────────
+  /api/health:
+    get:
+      summary: Health check
+      security: []
+      tags: [System]
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '503':
+          description: Database unreachable
+
+  # ── Schema ──────────────────────────────────────────────────────────────────
+  /api/schema:
+    get:
+      summary: Get schema and UiConfig for all models
+      tags: [System]
+      responses:
+        '200':
+          description: Schema metadata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SchemaResponse'
+
+  # ── Auth ────────────────────────────────────────────────────────────────────
+  /api/auth/login:
+    post:
+      summary: Login
+      security: []
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Login successful. Sets HttpOnly refresh token cookie.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '401':
+          description: Invalid credentials
+
+  /api/auth/register:
+    post:
+      summary: Register a new user
+      security: []
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password, name]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  description: Min 8 chars, at least one uppercase letter and one digit
+                name:
+                  type: string
+      responses:
+        '201':
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '409':
+          description: Email already in use
+
+  /api/auth/refresh:
+    post:
+      summary: Refresh access token
+      description: Requires a valid refresh token in the HttpOnly cookie `refresh_token`.
+      security: []
+      tags: [Auth]
+      responses:
+        '200':
+          description: New access token issued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '401':
+          description: Invalid or expired refresh token
+
+  /api/auth/logout:
+    post:
+      summary: Logout
+      tags: [Auth]
+      responses:
+        '200':
+          description: Logged out, refresh token invalidated
+
+  /api/auth/me:
+    get:
+      summary: Get current user
+      tags: [Auth]
+      responses:
+        '200':
+          description: Current user info
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+
+  # ── CRUD ────────────────────────────────────────────────────────────────────
+  /api/{model}:
+    parameters:
+      - name: model
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Lowercase model name (e.g., `product`, `task`, `category`)
+
+    get:
+      summary: List records
+      tags: [CRUD]
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            default: 10
+            maximum: 100
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Full-text search on configured searchable fields
+        - name: sortField
+          in: query
+          schema:
+            type: string
+        - name: sortDir
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: asc
+        - name: include
+          in: query
+          schema:
+            type: string
+          description: Comma-separated relation names to include (e.g., `category,owner`)
+        - name: fields
+          in: query
+          schema:
+            type: string
+          description: Comma-separated field names to return (e.g., `id,name,price`)
+      responses:
+        '200':
+          description: Paginated list of records
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse'
+
+    post:
+      summary: Create record
+      tags: [CRUD]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Record created
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/{model}/{id}:
+    parameters:
+      - name: model
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+
+    get:
+      summary: Get record by ID
+      tags: [CRUD]
+      parameters:
+        - name: include
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Record found
+        '404':
+          description: Not found
+
+    put:
+      summary: Update record
+      tags: [CRUD]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Record updated
+        '422':
+          description: Validation error
+
+    delete:
+      summary: Delete record
+      tags: [CRUD]
+      responses:
+        '200':
+          description: Record deleted
+        '404':
+          description: Not found
+
+  /api/{model}/batch:
+    parameters:
+      - name: model
+        in: path
+        required: true
+        schema:
+          type: string
+
+    delete:
+      summary: Batch delete records
+      tags: [CRUD]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ids]
+              properties:
+                ids:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: Records deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted:
+                    type: integer
+
+    patch:
+      summary: Batch update records
+      tags: [CRUD]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ids, data]
+              properties:
+                ids:
+                  type: array
+                  items:
+                    type: string
+                data:
+                  type: object
+      responses:
+        '200':
+          description: Records updated
+
+  /api/{model}/export:
+    parameters:
+      - name: model
+        in: path
+        required: true
+        schema:
+          type: string
+
+    get:
+      summary: Export records as CSV
+      tags: [CRUD]
+      parameters:
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [csv]
+            default: csv
+      responses:
+        '200':
+          description: CSV file
+          content:
+            text/csv:
+              schema:
+                type: string
+
+  # ── File Upload ──────────────────────────────────────────────────────────────
+  /api/upload:
+    post:
+      summary: Upload a file
+      tags: [Files]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Max 10MB, any file type
+                entityModel:
+                  type: string
+                  description: Model name to associate the file with
+                entityId:
+                  type: string
+                  description: Record ID to associate the file with
+      responses:
+        '201':
+          description: File uploaded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Attachment'
+        '413':
+          description: File exceeds 10MB limit
+
+  /api/uploads/{storedName}:
+    get:
+      summary: Serve an uploaded file
+      tags: [Files]
+      parameters:
+        - name: storedName
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: File content
+        '404':
+          description: File not found
+
+  # ── AI ───────────────────────────────────────────────────────────────────────
+  /api/ai/tools:
+    get:
+      summary: List AI tool definitions (OpenAI function calling format)
+      tags: [AI]
+      security:
+        - apiKeyAuth: []
+      responses:
+        '200':
+          description: Array of tool definitions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AiTool'
+        '401':
+          description: Missing or invalid X-API-Key
+
+  /api/ai/execute:
+    post:
+      summary: Execute an AI tool
+      tags: [AI]
+      security:
+        - apiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tool, arguments]
+              properties:
+                tool:
+                  type: string
+                  description: Tool name in the format `{action}_{ModelName}`
+                  example: list_Product
+                arguments:
+                  type: object
+                  description: Tool-specific arguments
+                  example:
+                    take: 5
+                    where:
+                      isPublic: true
+      responses:
+        '200':
+          description: Tool execution result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    description: The tool output (array for list, object for get/create/update, null for delete)
+        '400':
+          description: Unknown tool or invalid arguments
+        '401':
+          description: Missing or invalid X-API-Key

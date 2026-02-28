@@ -1,0 +1,35 @@
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: zenku
+      POSTGRES_USER: zenku
+      POSTGRES_PASSWORD: zenku_secret
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U zenku"]
+      interval: 5s
+      retries: 5
+
+  app:
+    build: .
+    ports:
+      - "3001:3001"
+    environment:
+      DATABASE_URL: postgresql://zenku:zenku_secret@db:5432/zenku
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production-32chars-min}
+      NODE_ENV: production
+      CORS_ORIGIN: http://localhost:3001
+      PORT: "3001"
+      AI_API_KEY: ${AI_API_KEY:-}
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - uploads_data:/app/packages/server/uploads
+      - ./packages/server/schema:/app/packages/server/schema
+
+volumes:
+  postgres_data:
+  uploads_data:

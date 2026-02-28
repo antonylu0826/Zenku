@@ -3,7 +3,16 @@
   "compilerOptions": {
     "jsx": "react-jsx",
     "rootDir": "./src",
-    "outDir": "./dist"
+    "outDir": "./dist",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": [
+        "./src/*"
+      ]
+    },
+    "types": ["vite/client"]
   },
-  "include": ["src"]
+  "include": [
+    "src"
+  ]
 }

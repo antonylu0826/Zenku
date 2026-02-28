@@ -1,0 +1,82 @@
+{
+    "common": {
+        "save": "Save",
+        "cancel": "Cancel",
+        "edit": "Edit",
+        "delete": "Delete",
+        "create": "Create",
+        "back": "Back",
+        "loading": "Loading…",
+        "noRecords": "No records found",
+        "search": "Search",
+        "export": "Export CSV",
+        "yes": "Yes",
+        "no": "No"
+    },
+    "auth": {
+        "loginTitle": "Sign in to Zenku",
+        "loginSubtitle": "Enter your credentials to continue",
+        "email": "Email",
+        "password": "Password",
+        "name": "Name",
+        "login": "Sign in",
+        "logout": "Logout",
+        "loggingIn": "Signing in…",
+        "invalidCredentials": "Invalid email or password",
+        "profile": "Profile",
+        "role": "Role"
+    },
+    "list": {
+        "newRecord": "New {{entity}}",
+        "records": "{{count}} record",
+        "records_plural": "{{count}} records",
+        "page": "Page {{page}} of {{total}}",
+        "previous": "Previous",
+        "next": "Next",
+        "selected": "{{count}} selected",
+        "deleteSelected": "Delete selected",
+        "deselectAll": "Deselect all",
+        "confirmDeleteMany": "Delete {{count}} {{entity}}?",
+        "confirmDeleteManyDesc": "This action cannot be undone. {{count}} record(s) will be permanently deleted.",
+        "deleteCount": "Delete {{count}} record",
+        "deleteCount_plural": "Delete {{count}} records"
+    },
+    "form": {
+        "createTitle": "Create {{entity}}",
+        "editTitle": "Edit {{entity}}",
+        "saving": "Saving…",
+        "required": "This field is required",
+        "selectOption": "Select an option",
+        "searchRelation": "Search…",
+        "validationError": "Please fix the errors above",
+        "fieldErrors": "Validation error"
+    },
+    "detail": {
+        "backToList": "Back to {{entity}}",
+        "editRecord": "Edit",
+        "deleteRecord": "Delete",
+        "confirmDelete": "Delete {{entity}}?",
+        "confirmDeleteDesc": "This action cannot be undone. This record will be permanently deleted."
+    },
+    "toast": {
+        "created": "{{entity}} created successfully",
+        "updated": "{{entity}} updated successfully",
+        "deleted": "{{entity}} deleted successfully",
+        "deletedMany": "{{count}} record(s) deleted",
+        "statusUpdated": "Status updated",
+        "error": "An error occurred. Please try again.",
+        "deleteError": "Failed to delete {{entity}}",
+        "uploadSuccess": "{{filename}} uploaded",
+        "uploadError": "Upload failed"
+    },
+    "upload": {
+        "dragDrop": "Drag & drop or click to upload",
+        "maxSize": "Max 10MB",
+        "uploading": "Uploading…"
+    },
+    "language": {
+        "label": "Language",
+        "en": "English",
+        "zhTW": "繁體中文"
+    }
+}

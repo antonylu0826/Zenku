@@ -19,11 +19,12 @@ function buildQuery(params: ListParams): string {
   return "?" + new URLSearchParams(entries.map(([k, v]) => [k, String(v)])).toString();
 }
 
-export function useEntityList(entityPath: string, params: ListParams = {}) {
+export function useEntityList(entityPath: string, params: ListParams = {}, options?: { enabled?: boolean }) {
   const query = buildQuery(params);
   return useQuery({
     queryKey: ["entity", entityPath, params],
     queryFn: () => api.get<PaginatedResponse<Record<string, unknown>>>(`/${entityPath}${query}`),
+    enabled: options?.enabled,
   });
 }
 
@@ -61,6 +62,33 @@ export function useEntityDelete(entityPath: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => api.delete(`/${entityPath}/${id}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["entity", entityPath] });
+    },
+  });
+}
+
+export function useEntityBatchDelete(entityPath: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (ids: string[]) =>
+      api.delete(`/${entityPath}/batch`, { ids }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["entity", entityPath] });
+    },
+  });
+}
+
+export function useEntityBatchUpdate(entityPath: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      ids,
+      data,
+    }: {
+      ids: string[];
+      data: Record<string, unknown>;
+    }) => api.patch(`/${entityPath}/batch`, { ids, data }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["entity", entityPath] });
     },
