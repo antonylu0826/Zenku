@@ -1,0 +1,24 @@
+{
+  "name": "@zenku/server",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun run --watch src/index.ts",
+    "start": "bun run src/index.ts",
+    "seed": "bun run src/seed.ts"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1",
+    "@hono/zod-validator": "^0.7.6",
+    "@prisma/client": "^6",
+    "@zenku/core": "workspace:*",
+    "@zenstackhq/runtime": "^2",
+    "hono": "^4",
+    "prisma": "^6",
+    "zenstack": "^2"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  }
+}

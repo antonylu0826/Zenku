@@ -1,0 +1,16 @@
+{
+  "name": "@zenku/cli",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "zenku": "./src/index.ts"
+  },
+  "dependencies": {
+    "@zenku/core": "workspace:*",
+    "commander": "^13"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  }
+}

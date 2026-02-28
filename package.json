@@ -1,0 +1,14 @@
+{
+  "name": "zenku",
+  "private": true,
+  "workspaces": ["packages/*"],
+  "devDependencies": {
+    "@types/node": "^25.3.2",
+    "@zenstackhq/tanstack-query": "^3.3.3",
+    "prisma": "^6",
+    "zenstack": "^2.22.1"
+  },
+  "dependencies": {
+    "@prisma/client": "^6"
+  }
+}
