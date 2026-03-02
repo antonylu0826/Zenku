@@ -209,14 +209,15 @@ export default function GenericEntityFormPage({
 
       // If a foreign key field has a corresponding object populated (via Prisma include),
       // or if it's already a string, ensure formData[fkField] is set to the bare string ID.
-      meta?.fields.filter(f => f.name.endsWith("Id")).forEach(fkField => {
-        const relationName = fkField.name.slice(0, -2);
-        const relatedObj = existing[relationName] as Record<string, unknown> | undefined;
-        if (relatedObj && relatedObj.id) {
-          initialData[fkField.name] = relatedObj.id;
-        } else if (existing[fkField.name] && typeof existing[fkField.name] === "object") {
-          // Fallback if the FK field itself happens to be hydrated as an object
-          initialData[fkField.name] = (existing[fkField.name] as any).id;
+      // Ensure foreign key fields (like categoryId) are set to string IDs.
+      // We look for both endsWith("Id") and fields marked as isRelation in meta.
+      meta?.fields.forEach(f => {
+        if (f.isRelation && !f.isList) {
+          const fkName = f.name + "Id";
+          const relatedObj = existing[f.name] as Record<string, unknown> | undefined;
+          if (relatedObj && relatedObj.id) {
+            initialData[fkName] = relatedObj.id;
+          }
         }
       });
 
@@ -295,11 +296,26 @@ export default function GenericEntityFormPage({
     const data: Record<string, unknown> = {};
     for (const field of editableFields) {
       if (field.name in formData) {
-        data[field.name] = formData[field.name];
+        let value = formData[field.name];
+
+        // Ensure we don't send back the whole relation object if it leaked into formData
+        if (value && typeof value === 'object' && 'id' in value) {
+          data[field.name] = (value as any).id;
+        } else {
+          data[field.name] = value;
+        }
       }
     }
 
-    if (editableFields.some((f) => f.name === "ownerId") && !data.ownerId && user) {
+    // Also include relation IDs that might be in formData but not in editableFields
+    // (though editableFields should include them if they are relations)
+    relationSelectors.forEach(rel => {
+      if (formData[rel.fkField]) {
+        data[rel.fkField] = formData[rel.fkField];
+      }
+    });
+
+    if (meta.fields.some((f) => f.name === "ownerId") && !data.ownerId && user) {
       data.ownerId = user.id;
     }
 
