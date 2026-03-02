@@ -12,7 +12,9 @@
         "export": "匯出 CSV",
         "yes": "是",
         "no": "否",
-        "home": "首頁"
+        "home": "首頁",
+        "selectOption": "請選擇",
+        "details": "詳細資訊"
     },
     "welcome": {
         "title": "歡迎使用 Zenku",
@@ -62,7 +64,8 @@
         "selectOption": "請選擇",
         "searchRelation": "搜尋…",
         "validationError": "請修正上方的錯誤",
-        "fieldErrors": "驗證錯誤"
+        "fieldErrors": "驗證錯誤",
+        "enterField": "請輸入{{field}}"
     },
     "detail": {
         "backToList": "返回{{entity}}列表",
@@ -104,5 +107,117 @@
         "time": "時間",
         "event": "事件",
         "noEventsInRange": "此範圍內無事件"
+    },
+    "models": {
+        "User": {
+            "name": "使用者",
+            "plural": "使用者",
+            "fields": {
+                "id": "使用者編號",
+                "email": "電子郵件",
+                "name": "姓名",
+                "password": "密碼",
+                "role": "角色",
+                "products": "產品",
+                "tasks": "任務",
+                "refreshTokens": "更新權杖",
+                "createdAt": "建立時間",
+                "updatedAt": "更新時間"
+            }
+        },
+        "RefreshToken": {
+            "name": "更新權杖",
+            "plural": "更新權杖",
+            "fields": {
+                "id": "編號",
+                "token": "權杖",
+                "userId": "使用者編號",
+                "user": "使用者",
+                "expiresAt": "到期時間",
+                "createdAt": "建立時間"
+            }
+        },
+        "Category": {
+            "name": "產品分類",
+            "plural": "產品分類",
+            "fields": {
+                "id": "分類編號",
+                "name": "分類名稱",
+                "description": "描述",
+                "products": "產品列表",
+                "parentId": "上層分類編號",
+                "parent": "上層分類",
+                "children": "子分類",
+                "createdAt": "建立時間",
+                "updatedAt": "更新時間"
+            }
+        },
+        "Task": {
+            "name": "任務",
+            "plural": "任務",
+            "fields": {
+                "id": "任務編號",
+                "title": "標題",
+                "description": "描述",
+                "status": "狀態",
+                "dueDate": "截止日期",
+                "ownerId": "擁有者編號",
+                "owner": "擁有者",
+                "createdAt": "建立時間",
+                "updatedAt": "更新時間"
+            }
+        },
+        "Event": {
+            "name": "事件",
+            "plural": "事件",
+            "fields": {
+                "id": "事件編號",
+                "title": "標題",
+                "startDate": "開始日期",
+                "endDate": "結束日期",
+                "description": "描述",
+                "allDay": "全天",
+                "createdAt": "建立時間",
+                "updatedAt": "更新時間"
+            }
+        },
+        "Attachment": {
+            "name": "附件",
+            "plural": "附件",
+            "fields": {
+                "id": "附件編號",
+                "filename": "檔案名稱",
+                "storedName": "儲存名稱",
+                "mimeType": "MIME 類型",
+                "size": "檔案大小",
+                "entityModel": "關聯實體模型",
+                "entityId": "關聯實體編號",
+                "url": "檔案網址",
+                "createdAt": "建立時間"
+            }
+        },
+        "Product": {
+            "name": "產品",
+            "plural": "產品",
+            "fields": {
+                "id": "產品編號",
+                "code": "產品代碼",
+                "barcode": "條碼",
+                "spec": "規格",
+                "size": "尺寸",
+                "name": "產品名稱",
+                "price": "價格",
+                "stockQuantity": "庫存數量",
+                "totalValue": "總價值",
+                "description": "描述",
+                "isPublic": "是否公開",
+                "category": "產品分類",
+                "categoryId": "分類編號",
+                "owner": "擁有者",
+                "ownerId": "擁有者編號",
+                "createdAt": "建立時間",
+                "updatedAt": "更新時間"
+            }
+        }
     }
 }

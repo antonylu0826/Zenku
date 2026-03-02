@@ -43,7 +43,8 @@ interface DataTableProps {
     sortField: string;
     sortDir: "asc" | "desc";
     onSort: (field: string) => void;
-    formatValue: (val: unknown, field: FieldMeta) => React.ReactNode;
+    formatValue: (value: unknown, field: FieldMeta) => string | React.ReactNode;
+    formatHeader?: (field: FieldMeta) => string;
     deleteId: string | null;
     onDeleteRequest: (id: string) => void;
     onDeleteCancel: () => void;
@@ -64,6 +65,7 @@ export default function DataTable({
     sortDir,
     onSort,
     formatValue,
+    formatHeader,
     deleteId,
     onDeleteRequest,
     onDeleteCancel,
@@ -107,12 +109,12 @@ export default function DataTable({
                                         onClick={() => onSort(col.name)}
                                     >
                                         <span className="capitalize">
-                                            {col.name}
+                                            {formatHeader ? formatHeader(col) : col.name}
                                         </span>
                                         <SortIcon field={col.name} />
                                     </button>
                                 ) : (
-                                    <span className="capitalize">{col.name}</span>
+                                    <span className="capitalize">{formatHeader ? formatHeader(col) : col.name}</span>
                                 )}
                             </TableHead>
                         ))}

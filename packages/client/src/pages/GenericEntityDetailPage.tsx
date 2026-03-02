@@ -1,4 +1,5 @@
 import { useTranslation } from "react-i18next";
+import { useEntityTranslation } from "@/hooks/useEntityTranslation";
 import { useModelMeta } from "../hooks/useSchema";
 import { useEntityDetail, useEntityDelete } from "../hooks/useEntity";
 import type { FieldMeta } from "@zenku/core";
@@ -31,9 +32,14 @@ interface Props {
   onNavigate: (path: string) => void;
 }
 
-function formatValue(value: unknown, field: FieldMeta, t: (key: string) => string): React.ReactNode {
+function formatValue(
+  value: unknown,
+  field: FieldMeta,
+  t: (key: string) => string
+): React.ReactNode {
   if (value === null || value === undefined)
     return <span className="text-muted-foreground">—</span>;
+
   if (field.isId)
     return <span className="font-mono text-xs text-muted-foreground">{String(value)}</span>;
   if (field.type === "Boolean")
@@ -53,7 +59,7 @@ function formatValue(value: unknown, field: FieldMeta, t: (key: string) => strin
     const obj = value as Record<string, unknown>;
     return (
       <span className="font-medium">
-        {(obj.name as string) || (obj.email as string) || (obj.id as string) || "—"}
+        {(obj.name as string) || (obj.email as string) || (obj.title as string) || (obj.id as string) || "—"}
       </span>
     );
   }
@@ -66,6 +72,7 @@ export default function GenericEntityDetailPage({
   onNavigate,
 }: Props) {
   const { t } = useTranslation();
+  const { tEntityName, tEntityField } = useEntityTranslation();
   const meta = useModelMeta(entityName);
   const entityPath = entityName.charAt(0).toLowerCase() + entityName.slice(1);
   const { data, isLoading, error } = useEntityDetail(entityPath, entityId);
@@ -98,15 +105,19 @@ export default function GenericEntityDetailPage({
   if (!data)
     return <div className="p-6 text-sm text-muted-foreground">{t("common.noRecords")}</div>;
 
-  const visibleFields = meta.fields.filter((f) => !f.isList);
+  const fkFieldNames = meta.fields
+    .filter((f) => f.isRelation && !f.isList)
+    .map((f) => f.name + "Id");
+
+  const visibleFields = meta.fields.filter((f) => !f.isList && !fkFieldNames.includes(f.name));
 
   const handleDelete = async () => {
     try {
       await deleteMutation.mutateAsync(entityId);
-      toast.success(t("toast.deleted", { entity: entityName }));
+      toast.success(t("toast.deleted", { entity: tEntityName(meta) }));
       onNavigate(`/${entityPath}`);
     } catch {
-      toast.error(t("toast.deleteError", { entity: entityName }));
+      toast.error(t("toast.deleteError", { entity: tEntityName(meta) }));
     }
   };
 
@@ -114,9 +125,9 @@ export default function GenericEntityDetailPage({
     <div className="p-6 max-w-2xl">
       <div className="flex items-start justify-between mb-6">
         <div>
-          <h2 className="text-2xl font-semibold tracking-tight">
-            {entityName}
-          </h2>
+          <CardTitle className="text-2xl flex items-center gap-2">
+            {tEntityName(meta)} {t("common.details")}
+          </CardTitle>
           <p className="text-sm text-muted-foreground mt-1 font-mono">
             {entityId}
           </p>
@@ -152,7 +163,7 @@ export default function GenericEntityDetailPage({
             </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>{t("detail.confirmDelete", { entity: entityName })}</AlertDialogTitle>
+                <AlertDialogTitle>{t("detail.confirmDelete", { entity: tEntityName(meta) })}</AlertDialogTitle>
                 <AlertDialogDescription>
                   {t("detail.confirmDeleteDesc")}
                 </AlertDialogDescription>
@@ -180,7 +191,7 @@ export default function GenericEntityDetailPage({
             {visibleFields.map((field) => (
               <div key={field.name} className="flex items-start px-6 py-3">
                 <dt className="w-40 text-sm font-medium text-muted-foreground shrink-0 pt-0.5 capitalize">
-                  {field.name}
+                  {tEntityField(meta, field.name)}
                 </dt>
                 <dd className="text-sm flex-1">
                   {formatValue(data[field.name], field, t)}

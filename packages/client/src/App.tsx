@@ -9,6 +9,7 @@ import GenericEntityDetailPage from "./pages/GenericEntityDetailPage";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Toaster } from "sonner";
 import { useTranslation } from "react-i18next";
+import { useEntityTranslation } from "@/hooks/useEntityTranslation";
 
 // Detect ejected pages via Vite's import.meta.glob (eager)
 const ejectedModules = import.meta.glob<{
@@ -29,7 +30,7 @@ function getEjectedPage(
   pageType: "list" | "form" | "detail",
 ): ComponentType<any> | undefined {
   const suffix = pageType === "list" ? "ListPage" : pageType === "form" ? "FormPage" : "DetailPage";
-  return ejectedPages[`${entityName}${suffix}`];
+  return ejectedPages[`${entityName}${suffix} `];
 }
 
 function useHashRouter() {
@@ -77,11 +78,52 @@ function parseRoute(path: string, models: string[]) {
 
 function AppContent() {
   const { t } = useTranslation();
-  const { user, isLoading: authLoading } = useAuth();
-  const { data: schema, isLoading: schemaLoading } = useSchema();
+  const { user, isLoading } = useAuth();
+  const { data: schema, isLoading: isSchemaLoading } = useSchema();
   const { path, navigate } = useHashRouter();
+  const { tEntityPlural, tEntityName } = useEntityTranslation();
 
-  if (authLoading) {
+  useEffect(() => {
+    let title = "Zenku";
+    if (isLoading || isSchemaLoading || !schema) {
+      title = t("common.loading") + " | Zenku";
+    } else if (!user) {
+      title = t("auth.loginTitle") + " | Zenku";
+    } else {
+      const modelNames = schema.models.map((m) => m.name);
+      const route = parseRoute(path, modelNames);
+      switch (route.page) {
+        case "home":
+          title = t("welcome.title") + " | Zenku";
+          break;
+        case "list":
+          const modelList = schema.models.find(m => m.name === route.entityName);
+          if (modelList) {
+            title = tEntityPlural(modelList) + " | Zenku";
+          }
+          break;
+        case "form":
+          const modelForm = schema.models.find(m => m.name === route.entityName);
+          if (modelForm) {
+            title = (route.entityId ? t("form.editTitle", { entity: tEntityName(modelForm) }) : t("form.createTitle", { entity: tEntityName(modelForm) })) + " | Zenku";
+          }
+          break;
+        case "detail":
+          const modelDetail = schema.models.find(m => m.name === route.entityName);
+          if (modelDetail) {
+            title = tEntityName(modelDetail) + t("common.details") + " | Zenku";
+          }
+          break;
+        case "notfound":
+          title = t("welcome.notFound") + " | Zenku";
+          break;
+      }
+    }
+    document.title = title;
+  }, [path, user, isLoading, schema, isSchemaLoading, t, tEntityPlural, tEntityName]);
+
+
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-gray-400">{t("common.loading")}</div>
@@ -93,7 +135,7 @@ function AppContent() {
     return <LoginPage />;
   }
 
-  if (schemaLoading || !schema) {
+  if (isSchemaLoading || !schema) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-gray-400">{t("common.loading")}</div>

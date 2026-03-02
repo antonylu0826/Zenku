@@ -15,7 +15,7 @@
     "@hono/zod-validator": "^0.7.6",
     "@prisma/client": "^6",
     "@zenku/core": "workspace:*",
-    "@zenstackhq/runtime": "^2",
+    "@zenstackhq/runtime": "2.22.1",
     "hono": "^4",
     "pluralize": "^8.0.0",
     "prisma": "^6",

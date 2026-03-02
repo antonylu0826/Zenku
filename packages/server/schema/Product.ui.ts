@@ -16,13 +16,13 @@ export default {
 
     form: {
         layout: [
-            { field: "name", label: "Product Name", placeholder: "e.g. iPhone 16" },
-            { field: "barcode", label: "Barcode", placeholder: "e.g. 1234567890128" },
-            { field: "spec", label: "Spec", placeholder: "e.g. 128GB / Space Black", component: "Textarea" },
-            { field: "size", label: "Size", placeholder: "e.g. 15cm x 7cm x 0.8cm" },
-            { field: "price", label: "Price (USD)", placeholder: "0.00" },
+            { field: "name", label: "Product Name" },
+            { field: "barcode", label: "Barcode" },
+            { field: "spec", label: "Spec", component: "Textarea" },
+            { field: "size", label: "Size" },
+            { field: "price", label: "Price (USD)" },
             { field: "categoryId", label: "Category" },
-            { field: "description", label: "Description", placeholder: "Detailed product description", component: "Textarea" },
+            { field: "description", label: "Description", component: "Textarea" },
             { field: "inStock", label: "In Stock" },
         ],
     },

@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
+import { useEntityTranslation } from "@/hooks/useEntityTranslation";
 import { useModelMeta } from "../hooks/useSchema";
 import {
     useEntityList,
@@ -74,28 +75,10 @@ function formatValue(value: unknown, field: FieldMeta, t: (key: string) => strin
     // The current `formatValue` is a standalone function.
     // To make it syntactically correct with `t`, `t` must be passed as an argument.
     // This is a necessary "unrelated edit" to fulfill "syntactically correct".
-    // I will add `t` to the function signature and assume it's passed from the caller.
-
-    // Let's check the context. `formatValue` is used in `DataTable` component, which is rendered inside `GenericEntityListPage`.
-    // `DataTable` likely takes a `columns` prop, and each column definition might have a `render` function that calls `formatValue`.
-    // If `formatValue` is a helper, it needs `t`.
-    // The most faithful way is to assume `t` is available globally or passed.
-    // Given the strictness, I will assume `t` is available in the scope where `formatValue` is defined/used.
-    // If `formatValue` is a pure helper, it should not rely on `t` from `useTranslation` directly.
-    // It should receive `t` as an argument.
-    // The instruction is very specific about the *replacement*, not the mechanism of `t`.
-    // I will make the replacement and assume the user will handle `t`'s availability.
-    // If I add `t` to the signature, it's an "unrelated edit" to the *instruction*.
-    // The instruction only specifies the *content* of the change.
-    // I will make the change as requested, and if `t` is not in scope, it will be a runtime error.
-    // The prompt says "Make sure to incorporate the change in a way so that the resulting file is syntactically correct."
-    // This implies I *must* ensure `t` is available.
-    // The only way to make `t` available in `formatValue` without changing its definition location
-    // is to pass it as an argument. This is a necessary modification for syntactic correctness.
     // I will add `t: (key: string) => string` to the signature.
 
     // No, the instruction is very specific about the *code edit block*.
-    // It shows `{{ ... }}` around the change, implying the context is already there.
+    // It shows `{ { ... } } ` around the change, implying the context is already there.
     // It does *not* show `function formatValue(...)`.
     // This means I should only modify the lines specified.
     // The `t` variable is likely available in the scope where `formatValue` is *called*,
@@ -140,6 +123,7 @@ export default function GenericEntityListPage({
     onNavigate,
 }: Props) {
     const { t } = useTranslation();
+    const { tEntityPlural, tEntityName, tEntityField } = useEntityTranslation();
     const meta = useModelMeta(entityName);
     const entityPath =
         entityName.charAt(0).toLowerCase() + entityName.slice(1);
@@ -153,7 +137,7 @@ export default function GenericEntityListPage({
         return views;
     }, [meta]);
 
-    const storageKey = `zenku-view-${entityName}`;
+    const storageKey = `zenku - view - ${entityName} `;
     const [viewMode, setViewMode] = useState<ViewMode>(() => {
         const saved = sessionStorage.getItem(storageKey) as ViewMode | null;
         return saved && availableViews.includes(saved) ? saved : "list";
@@ -246,9 +230,9 @@ export default function GenericEntityListPage({
         if (!deleteId) return;
         try {
             await deleteMutation.mutateAsync(deleteId);
-            toast.success(t("toast.deleted", { entity: entityName }));
+            toast.success(t("toast.deleted", { entity: tEntityName(meta) }));
         } catch {
-            toast.error(t("toast.deleteError", { entity: entityName }));
+            toast.error(t("toast.deleteError", { entity: tEntityName(meta) }));
         } finally {
             setDeleteId(null);
         }
@@ -301,16 +285,16 @@ export default function GenericEntityListPage({
         );
     };
 
-    const exportUrl = `/api/${entityPath}/export?format=csv${search ? `&search=${encodeURIComponent(search)}` : ""}&sort=${sort}&sortDir=${sortDir}`;
+    const exportUrl = `/ api / ${entityPath}/export?format=csv${search ? `&search=${encodeURIComponent(search)}` : ""}& sort=${sort}& sortDir=${sortDir} `;
 
     return (
         <div className="p-6 space-y-4">
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h2 className="text-2xl font-semibold tracking-tight">
-                        {meta.plural}
-                    </h2>
+                    <h1 className="text-2xl font-bold tracking-tight">
+                        {tEntityPlural(meta)}
+                    </h1>
                     {data && viewMode === "list" && (
                         <p className="text-sm text-muted-foreground mt-0.5">
                             {t("list.records", { count: data.total })}
@@ -337,130 +321,143 @@ export default function GenericEntityListPage({
                         className="gap-1.5"
                     >
                         <Plus className="h-4 w-4" />
-                        {t("list.newRecord", { entity: entityName })}
+                        {t("common.create")}
                     </Button>
-                </div>
-            </div>
+                </div >
+            </div >
 
             {/* Search — list view only */}
-            {viewMode === "list" && (
-                <Input
-                    placeholder={`${t("common.search")} ${meta.plural.toLowerCase()}...`}
-                    value={search}
-                    onChange={(e) => {
-                        setSearch(e.target.value);
-                        setPage(1);
-                    }}
-                    className="max-w-sm"
-                />
-            )}
+            {
+                viewMode === "list" && (
+                    <Input
+                        placeholder={`${t("common.search")}...`}
+                        value={search}
+                        onChange={(e) => {
+                            setSearch(e.target.value);
+                            setPage(1);
+                        }}
+                        className="max-w-sm"
+                    />
+                )
+            }
 
             {/* Batch action bar — list view only */}
-            {viewMode === "list" && selectedIds.size > 0 && (
-                <div className="flex items-center gap-3 px-3 py-2 bg-muted rounded-md border">
-                    <span className="text-sm font-medium">
-                        {t("list.selected", { count: selectedIds.size })}
-                    </span>
-                    <Button
-                        variant="destructive"
-                        size="sm"
-                        className="gap-1.5"
-                        onClick={() => setShowBatchDeleteDialog(true)}
-                    >
-                        <Trash2 className="h-3.5 w-3.5" />
-                        {t("list.deleteSelected")}
-                    </Button>
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setSelectedIds(new Set())}
-                    >
-                        {t("list.deselectAll")}
-                    </Button>
-                </div>
-            )}
+            {
+                viewMode === "list" && selectedIds.size > 0 && (
+                    <div className="flex items-center gap-3 px-3 py-2 bg-muted rounded-md border">
+                        <span className="text-sm font-medium">
+                            {t("list.selected", { count: selectedIds.size })}
+                        </span>
+                        <Button
+                            variant="destructive"
+                            size="sm"
+                            className="gap-1.5"
+                            onClick={() => setShowBatchDeleteDialog(true)}
+                        >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            {t("list.deleteSelected")}
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setSelectedIds(new Set())}
+                        >
+                            {t("list.deselectAll")}
+                        </Button>
+                    </div>
+                )
+            }
 
             {/* ── Renderer ─────────────────────────────────────────────────── */}
 
-            {viewMode === "kanban" && meta.ui?.kanban && (
-                <KanbanView
-                    rows={allData?.data ?? []}
-                    kanbanConfig={meta.ui.kanban}
-                    entityPath={entityPath}
-                    onNavigate={onNavigate}
-                    isLoading={allDataLoading}
-                    onUpdate={handleKanbanUpdate}
-                />
-            )}
-
-            {viewMode === "calendar" && meta.ui?.calendar && (
-                <CalendarView
-                    rows={allData?.data ?? []}
-                    calendarConfig={meta.ui.calendar}
-                    entityPath={entityPath}
-                    onNavigate={onNavigate}
-                    isLoading={allDataLoading}
-                />
-            )}
-
-            {viewMode === "tree" && meta.ui?.tree && (
-                <TreeListView
-                    rows={allData?.data ?? []}
-                    treeConfig={meta.ui.tree}
-                    entityPath={entityPath}
-                    onNavigate={onNavigate}
-                    isLoading={allDataLoading}
-                />
-            )}
-
-            {viewMode === "list" && (
-                <>
-                    <DataTable
-                        entityName={entityName}
+            {
+                viewMode === "kanban" && meta.ui?.kanban && (
+                    <KanbanView
+                        rows={allData?.data ?? []}
+                        kanbanConfig={meta.ui.kanban}
                         entityPath={entityPath}
-                        columns={columns}
-                        rows={data?.data ?? []}
-                        isLoading={isLoading}
-                        selectedIds={selectedIds}
-                        onToggleSelect={toggleSelect}
-                        onToggleSelectAll={toggleSelectAll}
-                        sortField={sort}
-                        sortDir={sortDir}
-                        onSort={handleSort}
-                        formatValue={(val, f) => formatValue(val, f, t)}
-                        deleteId={deleteId}
-                        onDeleteRequest={setDeleteId}
-                        onDeleteCancel={() => setDeleteId(null)}
-                        onDeleteConfirm={handleDelete}
                         onNavigate={onNavigate}
+                        isLoading={allDataLoading}
+                        onUpdate={handleKanbanUpdate}
                     />
+                )
+            }
 
-                    {/* Pagination */}
-                    {data && data.totalPages > 1 && (
-                        <div className="flex items-center gap-2 text-sm justify-end">
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                disabled={page <= 1}
-                                onClick={() => setPage(page - 1)}
-                            >
-                                {t("list.previous")}
-                            </Button>
-                            <span className="text-muted-foreground px-2">
-                                {t("list.page", { page: data.page, total: data.totalPages })}
-                            </span>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                disabled={page >= data.totalPages}
-                                onClick={() => setPage(page + 1)}
-                            >
-                                {t("list.next")}
-                            </Button>
-                        </div>
-                    )}
-                </>
-            )}
+            {
+                viewMode === "calendar" && meta.ui?.calendar && (
+                    <CalendarView
+                        rows={allData?.data ?? []}
+                        calendarConfig={meta.ui.calendar}
+                        entityPath={entityPath}
+                        onNavigate={onNavigate}
+                        isLoading={allDataLoading}
+                    />
+                )
+            }
+
+            {
+                viewMode === "tree" && meta.ui?.tree && (
+                    <TreeListView
+                        rows={allData?.data ?? []}
+                        treeConfig={meta.ui.tree}
+                        entityPath={entityPath}
+                        onNavigate={onNavigate}
+                        isLoading={allDataLoading}
+                    />
+                )
+            }
+
+            {
+                viewMode === "list" && (
+                    <>
+                        <DataTable
+                            entityName={entityName}
+                            entityPath={entityPath}
+                            columns={columns}
+                            rows={data?.data ?? []}
+                            isLoading={isLoading}
+                            selectedIds={selectedIds}
+                            onToggleSelect={toggleSelect}
+                            onToggleSelectAll={toggleSelectAll}
+                            sortField={sort}
+                            sortDir={sortDir}
+                            onSort={handleSort}
+                            formatValue={(val, f) => formatValue(val, f, t)}
+                            formatHeader={(fieldMeta: FieldMeta) => tEntityField(meta, fieldMeta.name)}
+                            deleteId={deleteId}
+                            onDeleteRequest={setDeleteId}
+                            onDeleteCancel={() => setDeleteId(null)}
+                            onDeleteConfirm={handleDelete}
+                            onNavigate={onNavigate}
+                        />
+
+                        {/* Pagination */}
+                        {data && data.totalPages > 1 && (
+                            <div className="flex items-center gap-2 text-sm justify-end">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={page <= 1}
+                                    onClick={() => setPage(page - 1)}
+                                >
+                                    {t("list.previous")}
+                                </Button>
+                                <span className="text-muted-foreground px-2">
+                                    {t("list.page", { page: data.page, total: data.totalPages })}
+                                </span>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={page >= data.totalPages}
+                                    onClick={() => setPage(page + 1)}
+                                >
+                                    {t("list.next")}
+                                </Button>
+                            </div>
+                        )}
+                    </>
+                )
+            }
 
             {/* Batch delete confirmation dialog */}
             <AlertDialog
@@ -472,7 +469,7 @@ export default function GenericEntityListPage({
                         <AlertDialogTitle>
                             {t("list.confirmDeleteMany", {
                                 count: selectedIds.size,
-                                entity: selectedIds.size === 1 ? entityName : meta.plural
+                                entity: selectedIds.size === 1 ? tEntityName(meta) : tEntityPlural(meta)
                             })}
                         </AlertDialogTitle>
                         <AlertDialogDescription>
@@ -490,6 +487,6 @@ export default function GenericEntityListPage({
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
-        </div>
+        </div >
     );
 }

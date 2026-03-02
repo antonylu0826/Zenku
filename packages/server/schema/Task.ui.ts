@@ -11,7 +11,7 @@ export default {
 
     form: {
         layout: [
-            { field: "title", label: "Title", placeholder: "Task title" },
+            { field: "title", label: "Title" },
             { field: "description", label: "Description", component: "Textarea" },
             { field: "status", label: "Status" },
             { field: "dueDate", label: "Due Date" },

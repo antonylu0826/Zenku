@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useEntityTranslation } from "@/hooks/useEntityTranslation";
 import { useModelMeta } from "../hooks/useSchema";
 import { useEntityDetail, useEntityCreate, useEntityUpdate } from "../hooks/useEntity";
 import { useEntityList } from "../hooks/useEntity";
@@ -9,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
   SelectContent,
@@ -91,6 +93,32 @@ function FieldInput({
     );
   }
 
+  if (field.isEnum && field.enumValues) {
+    const { t } = useTranslation();
+    const strValue = (value as string) || "";
+    const valueExists = field.enumValues.includes(strValue);
+
+    return (
+      <Select value={strValue} onValueChange={onChange}>
+        <SelectTrigger className={error ? "border-destructive" : ""}>
+          <SelectValue placeholder={`${t("common.selectOption")}...`} />
+        </SelectTrigger>
+        <SelectContent>
+          {strValue && !valueExists && (
+            <SelectItem key={strValue} value={strValue} className="hidden">
+              {strValue}
+            </SelectItem>
+          )}
+          {field.enumValues.map((opt) => (
+            <SelectItem key={opt} value={opt}>
+              {opt}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    );
+  }
+
   return (
     <Input
       type="text"
@@ -107,6 +135,7 @@ function RelationSelect({
   value,
   onChange,
   error,
+  t,
 }: {
   modelName: string;
   value?: string;
@@ -116,6 +145,8 @@ function RelationSelect({
 }) {
   const path = modelName.charAt(0).toLowerCase() + modelName.slice(1);
   const { data } = useEntityList(path, { pageSize: 100 });
+  const meta = useModelMeta(modelName);
+  const { tEntityName } = useEntityTranslation();
 
   const options = (data?.data || []).map((item) => ({
     id: item.id as string,
@@ -126,12 +157,21 @@ function RelationSelect({
       (item.id as string),
   }));
 
+  // Ensure the currently selected value always exists in the DOM
+  // so Radix UI doesn't reset it when options are still loading
+  const valueExistsInOptions = options.some((opt) => opt.id === value);
+
   return (
     <Select value={value || ""} onValueChange={onChange}>
       <SelectTrigger className={error ? "border-destructive" : ""}>
-        <SelectValue placeholder={`${t("common.selectOption")} ${modelName}...`} />
+        <SelectValue placeholder={`${t("common.selectOption")}...`} />
       </SelectTrigger>
       <SelectContent>
+        {value && !valueExistsInOptions && (
+          <SelectItem key={value} value={value} className="hidden">
+            {value}
+          </SelectItem>
+        )}
         {options.map((opt) => (
           <SelectItem key={opt.id} value={opt.id}>
             {opt.label}
@@ -148,6 +188,7 @@ export default function GenericEntityFormPage({
   onNavigate,
 }: Props) {
   const { t } = useTranslation();
+  const { tEntityName, tEntityField } = useEntityTranslation();
   const meta = useModelMeta(entityName);
   const entityPath = entityName.charAt(0).toLowerCase() + entityName.slice(1);
   const isEdit = !!entityId;
@@ -163,11 +204,43 @@ export default function GenericEntityFormPage({
 
   useEffect(() => {
     if (isEdit && existing) {
-      setFormData({ ...existing });
+      // Create a shallow copy to manipulate foreign key values
+      const initialData = { ...existing };
+
+      // If a foreign key field has a corresponding object populated (via Prisma include),
+      // or if it's already a string, ensure formData[fkField] is set to the bare string ID.
+      meta?.fields.filter(f => f.name.endsWith("Id")).forEach(fkField => {
+        const relationName = fkField.name.slice(0, -2);
+        const relatedObj = existing[relationName] as Record<string, unknown> | undefined;
+        if (relatedObj && relatedObj.id) {
+          initialData[fkField.name] = relatedObj.id;
+        } else if (existing[fkField.name] && typeof existing[fkField.name] === "object") {
+          // Fallback if the FK field itself happens to be hydrated as an object
+          initialData[fkField.name] = (existing[fkField.name] as any).id;
+        }
+      });
+
+      setFormData(initialData);
     }
-  }, [isEdit, existing]);
+  }, [isEdit, existing, meta]);
 
   if (!meta) return null;
+
+  // Prevent form render before data is populated to avoid uncontrolled input issues
+  if (isEdit && (!existing || Object.keys(formData).length === 0)) {
+    return (
+      <div className="p-6 max-w-2xl space-y-4">
+        <Skeleton className="h-8 w-48" />
+        <Card>
+          <CardContent className="pt-6 space-y-4">
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   // Build editable fields list:
   // If UiConfig specifies form.layout, use that order (skipping id/auto fields)
@@ -253,7 +326,7 @@ export default function GenericEntityFormPage({
     <div className="p-6 max-w-2xl">
       <div className="mb-6">
         <h2 className="text-2xl font-semibold tracking-tight">
-          {isEdit ? t("form.editTitle", { entity: entityName }) : t("form.createTitle", { entity: entityName })}
+          {isEdit ? t("form.editTitle", { entity: tEntityName(meta) }) : t("form.createTitle", { entity: tEntityName(meta) })}
         </h2>
       </div>
 
@@ -266,7 +339,15 @@ export default function GenericEntityFormPage({
 
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">{t("form.editTitle", { entity: "" }).replace(/ /g, "")}</CardTitle>
+          <CardTitle className="text-base">
+            {isEdit
+              ? t("form.editTitle", {
+                entity: tEntityName(meta),
+              })
+              : t("form.createTitle", {
+                entity: tEntityName(meta),
+              })}
+          </CardTitle>
           <CardDescription>
             {t("form.required")}
           </CardDescription>
@@ -283,9 +364,7 @@ export default function GenericEntityFormPage({
                     htmlFor={field.name}
                     className={field.type === "Boolean" ? "sr-only" : ""}
                   >
-                    {relSelector
-                      ? (getFieldLayout(field.name)?.label ?? relSelector.label)
-                      : (getFieldLayout(field.name)?.label ?? field.name)}
+                    {tEntityField(meta, field.name)}
                     {field.isRequired && (
                       <span className="text-destructive ml-1">*</span>
                     )}
@@ -305,7 +384,11 @@ export default function GenericEntityFormPage({
                       value={formData[field.name]}
                       onChange={(val) => handleChange(field.name, val)}
                       error={errs?.[0]}
-                      placeholder={getFieldLayout(field.name)?.placeholder}
+                      placeholder={
+                        getFieldLayout(field.name)?.placeholder
+                          ? t(getFieldLayout(field.name)!.placeholder!)
+                          : t("form.enterField", { field: tEntityField(meta, field.name) })
+                      }
                     />
                   )}
 

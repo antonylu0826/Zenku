@@ -11,7 +11,7 @@ export default {
 
     form: {
         layout: [
-            { field: "title", label: "Title", placeholder: "Event title" },
+            { field: "title", label: "Title" },
             { field: "startDate", label: "Start Date" },
             { field: "endDate", label: "End Date" },
             { field: "allDay", label: "All Day" },

@@ -23,6 +23,8 @@ export interface FieldMeta {
   documentation?: string;
   relationModel?: string;
   default?: unknown;
+  isEnum?: boolean;
+  enumValues?: string[];
 }
 
 export interface ModelMeta {

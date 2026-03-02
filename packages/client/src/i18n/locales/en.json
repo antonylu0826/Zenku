@@ -12,7 +12,9 @@
         "export": "Export CSV",
         "yes": "Yes",
         "no": "No",
-        "home": "Home"
+        "home": "Home",
+        "selectOption": "Select",
+        "details": "Details"
     },
     "welcome": {
         "title": "Welcome to Zenku",
@@ -62,7 +64,8 @@
         "selectOption": "Select an option",
         "searchRelation": "Search…",
         "validationError": "Please fix the errors above",
-        "fieldErrors": "Validation error"
+        "fieldErrors": "Validation error",
+        "enterField": "Enter {{field}}"
     },
     "detail": {
         "backToList": "Back to {{entity}}",
@@ -104,5 +107,117 @@
         "time": "Time",
         "event": "Event",
         "noEventsInRange": "There are no events in this range"
+    },
+    "models": {
+        "User": {
+            "name": "User",
+            "plural": "Users",
+            "fields": {
+                "id": "User ID",
+                "email": "Email Address",
+                "name": "Full Name",
+                "password": "Password",
+                "role": "System Role",
+                "products": "Products",
+                "tasks": "Tasks",
+                "refreshTokens": "Refresh Tokens",
+                "createdAt": "Created At",
+                "updatedAt": "Updated At"
+            }
+        },
+        "RefreshToken": {
+            "name": "Refresh Token",
+            "plural": "Refresh Tokens",
+            "fields": {
+                "id": "ID",
+                "token": "Token",
+                "userId": "User ID",
+                "user": "User",
+                "expiresAt": "Expires At",
+                "createdAt": "Created At"
+            }
+        },
+        "Category": {
+            "name": "Category",
+            "plural": "Categories",
+            "fields": {
+                "id": "Category ID",
+                "name": "Category Name",
+                "description": "Description",
+                "products": "Products",
+                "parentId": "Parent Category ID",
+                "parent": "Parent Category",
+                "children": "Subcategories",
+                "createdAt": "Created At",
+                "updatedAt": "Updated At"
+            }
+        },
+        "Task": {
+            "name": "Task",
+            "plural": "Tasks",
+            "fields": {
+                "id": "Task ID",
+                "title": "Title",
+                "description": "Description",
+                "status": "Status",
+                "dueDate": "Due Date",
+                "ownerId": "Owner ID",
+                "owner": "Owner",
+                "createdAt": "Created At",
+                "updatedAt": "Updated At"
+            }
+        },
+        "Event": {
+            "name": "Event",
+            "plural": "Events",
+            "fields": {
+                "id": "Event ID",
+                "title": "Title",
+                "startDate": "Start Date",
+                "endDate": "End Date",
+                "description": "Description",
+                "allDay": "All Day",
+                "createdAt": "Created At",
+                "updatedAt": "Updated At"
+            }
+        },
+        "Attachment": {
+            "name": "Attachment",
+            "plural": "Attachments",
+            "fields": {
+                "id": "Attachment ID",
+                "filename": "File Name",
+                "storedName": "Stored Name",
+                "mimeType": "MIME Type",
+                "size": "File Size",
+                "entityModel": "Entity Model",
+                "entityId": "Entity ID",
+                "url": "URL",
+                "createdAt": "Created At"
+            }
+        },
+        "Product": {
+            "name": "Product",
+            "plural": "Products",
+            "fields": {
+                "id": "Product ID",
+                "code": "Product Code",
+                "barcode": "Barcode",
+                "spec": "Specification",
+                "size": "Size",
+                "name": "Product Name",
+                "price": "Price",
+                "stockQuantity": "Stock Quantity",
+                "totalValue": "Total Value",
+                "description": "Description",
+                "isPublic": "Is Public",
+                "category": "Category",
+                "categoryId": "Category ID",
+                "owner": "Owner",
+                "ownerId": "Owner ID",
+                "createdAt": "Created At",
+                "updatedAt": "Updated At"
+            }
+        }
     }
 }

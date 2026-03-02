@@ -27,6 +27,7 @@ import {
 import { cn } from "@/lib/utils";
 import { resolveIcon } from "@/lib/icon-resolver";
 import { useTranslation } from "react-i18next";
+import { useEntityTranslation } from "@/hooks/useEntityTranslation";
 
 interface Props {
   children: ReactNode;
@@ -39,6 +40,9 @@ export default function AppLayout({ children, currentEntity, onNavigate }: Props
   const { user, logout } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
   const { t, i18n } = useTranslation();
+  const { tEntityPlural } = useEntityTranslation();
+
+  const currentModel = schema?.models.find((m) => m.name === currentEntity);
 
   return (
     <div className="flex h-screen bg-background overflow-hidden">
@@ -82,14 +86,14 @@ export default function AppLayout({ children, currentEntity, onNavigate }: Props
                   isActive && "font-medium"
                 )}
                 onClick={() => onNavigate(`/${path}`)}
-                title={collapsed ? model.plural : undefined}
+                title={collapsed ? tEntityPlural(model) : undefined}
               >
                 {(() => {
                   const Icon = resolveIcon(model.ui?.icon);
                   return <Icon className="h-4 w-4 shrink-0" />;
                 })()}
                 {!collapsed && (
-                  <span className="truncate">{model.plural}</span>
+                  <span className="truncate">{tEntityPlural(model)}</span>
                 )}
               </Button>
             );
@@ -201,7 +205,9 @@ export default function AppLayout({ children, currentEntity, onNavigate }: Props
               {t("common.home")}
             </span>
             <ChevronRight className="h-3.5 w-3.5" />
-            <span className="text-foreground font-medium">{currentEntity}</span>
+            <span className="text-foreground font-medium">
+              {currentModel ? tEntityPlural(currentModel) : currentEntity}
+            </span>
           </header>
         )}
         <main className="flex-1 overflow-y-auto">{children}</main>

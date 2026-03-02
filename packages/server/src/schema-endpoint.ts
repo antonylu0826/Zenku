@@ -88,18 +88,26 @@ export function createSchemaRoutes() {
     const models: ModelMeta[] = Prisma.dmmf.datamodel.models
       .filter((m) => !EXCLUDED_MODELS.includes(m.name))
       .map((model) => {
-        const fields: FieldMeta[] = model.fields.map((f) => ({
-          name: f.name,
-          type: mapPrismaType(f.type),
-          isRequired: f.isRequired,
-          isList: f.isList,
-          isId: f.isId,
-          isUnique: f.isUnique,
-          isRelation: !!f.relationName,
-          isReadOnly: isReadOnly(f),
-          documentation: f.documentation,
-          ...(f.relationName ? { relationModel: f.type } : {}),
-        }));
+        const fields: FieldMeta[] = model.fields.map((f) => {
+          // Check if this field represents an Enum type
+          const enumType = Prisma.dmmf.datamodel.enums.find((e) => e.name === f.type);
+          const isEnum = !!enumType;
+          const enumValues = isEnum ? enumType.values.map((v) => v.name) : undefined;
+
+          return {
+            name: f.name,
+            type: mapPrismaType(f.type),
+            isRequired: f.isRequired,
+            isList: f.isList,
+            isId: f.isId,
+            isUnique: f.isUnique,
+            isRelation: !!f.relationName,
+            isReadOnly: isReadOnly(f),
+            documentation: f.documentation,
+            ...(f.relationName ? { relationModel: f.type } : {}),
+            ...(isEnum ? { isEnum: true, enumValues } : {}),
+          };
+        });
 
         const pluralName = pluralize(model.name);
         const ui = uiConfigCache.get(model.name);
