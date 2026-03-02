@@ -161,6 +161,15 @@ export default function GenericEntityListPage({
     const [sortDir, setSortDir] = useState<"asc" | "desc">(
         uiDefaultSort?.dir ?? "desc",
     );
+
+    // Reset sort when entity changes to avoid using a field that doesn't exist in the new entity
+    useEffect(() => {
+        setSort(uiDefaultSort?.field ?? "createdAt");
+        setSortDir(uiDefaultSort?.dir ?? "desc");
+        setPage(1);
+        setSearch("");
+    }, [entityName, uiDefaultSort]);
+
     const [deleteId, setDeleteId] = useState<string | null>(null);
 
     // Multi-select state
