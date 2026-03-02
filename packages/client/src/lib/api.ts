@@ -77,6 +77,17 @@ async function request<T>(
         ...(options.headers as Record<string, string>),
     };
 
+    // If we don't have a token, and this is not a retry, and this is not an auth request,
+    // try to get a token via silent refresh BEFORE making the first request.
+    // This avoids a 401 in the console when the user refreshes the page.
+    const isAuthPath = path.startsWith("/auth/login") || path.startsWith("/auth/refresh");
+    if (!_accessToken && !isRetry && !isAuthPath) {
+        await refreshAccessToken();
+        if (_accessToken) {
+            headers["Authorization"] = `Bearer ${_accessToken}`;
+        }
+    }
+
     const res = await fetch(`${BASE_URL}${path}`, {
         ...options,
         headers,
@@ -86,13 +97,17 @@ async function request<T>(
     if (res.status === 401 && !isRetry) {
         const newToken = await refreshAccessToken();
         if (newToken) {
-            return request<T>(path, {
-                ...options,
-                headers: {
-                    ...options.headers,
-                    Authorization: `Bearer ${newToken}`
-                }
-            }, true);
+            return request<T>(
+                path,
+                {
+                    ...options,
+                    headers: {
+                        ...options.headers,
+                        Authorization: `Bearer ${newToken}`,
+                    },
+                },
+                true,
+            );
         }
     }
 
