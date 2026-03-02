@@ -62,7 +62,8 @@ model Category {
   updatedAt   DateTime   @updatedAt
 
   @@allow('read', true)
-  @@allow('create,update,delete', auth().role == ADMIN)
+  @@allow('create', auth() != null)
+  @@allow('update,delete', auth().role == ADMIN)
 }
 
 enum TaskStatus {
@@ -83,7 +84,8 @@ model Task {
   updatedAt   DateTime   @updatedAt
 
   @@allow('read', auth() != null)
-  @@allow('create,update,delete', auth().role == ADMIN)
+  @@allow('create', auth() != null)
+  @@allow('update,delete', auth().role == ADMIN)
 }
 
 model Event {
@@ -97,7 +99,8 @@ model Event {
   updatedAt   DateTime  @updatedAt
 
   @@allow('read', auth() != null)
-  @@allow('create,update,delete', auth().role == ADMIN)
+  @@allow('create', auth() != null)
+  @@allow('update,delete', auth().role == ADMIN)
 }
 
 model Attachment {
@@ -137,5 +140,6 @@ model Product {
 
   // Admin: full access; User: read only public products
   @@allow('read', auth().role == ADMIN || isPublic)
-  @@allow('create,update,delete', auth().role == ADMIN)
+  @@allow('create', auth() != null)
+  @@allow('update,delete', auth().role == ADMIN)
 }

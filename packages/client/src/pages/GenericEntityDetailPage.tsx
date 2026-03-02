@@ -31,7 +31,7 @@ interface Props {
   onNavigate: (path: string) => void;
 }
 
-function formatValue(value: unknown, field: FieldMeta): React.ReactNode {
+function formatValue(value: unknown, field: FieldMeta, t: (key: string) => string): React.ReactNode {
   if (value === null || value === undefined)
     return <span className="text-muted-foreground">—</span>;
   if (field.isId)
@@ -39,7 +39,7 @@ function formatValue(value: unknown, field: FieldMeta): React.ReactNode {
   if (field.type === "Boolean")
     return (
       <Badge variant={value ? "default" : "secondary"}>
-        {value ? "Yes" : "No"}
+        {value ? t("common.yes") : t("common.no")}
       </Badge>
     );
   if (field.type === "DateTime")
@@ -96,7 +96,7 @@ export default function GenericEntityDetailPage({
       </div>
     );
   if (!data)
-    return <div className="p-6 text-sm text-muted-foreground">Not found</div>;
+    return <div className="p-6 text-sm text-muted-foreground">{t("common.noRecords")}</div>;
 
   const visibleFields = meta.fields.filter((f) => !f.isList);
 
@@ -173,7 +173,7 @@ export default function GenericEntityDetailPage({
 
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">Record Information</CardTitle>
+          <CardTitle className="text-base">{t("auth.profile")}</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           <dl className="divide-y">
@@ -183,7 +183,7 @@ export default function GenericEntityDetailPage({
                   {field.name}
                 </dt>
                 <dd className="text-sm flex-1">
-                  {formatValue(data[field.name], field)}
+                  {formatValue(data[field.name], field, t)}
                 </dd>
               </div>
             ))}

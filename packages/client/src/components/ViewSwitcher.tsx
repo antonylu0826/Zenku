@@ -1,5 +1,6 @@
 import { Table2, Columns, CalendarDays, GitBranch } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "react-i18next";
 
 export type ViewMode = "list" | "kanban" | "calendar" | "tree";
 
@@ -16,14 +17,8 @@ const ICONS: Record<ViewMode, React.ElementType> = {
     tree: GitBranch,
 };
 
-const LABELS: Record<ViewMode, string> = {
-    list: "Table",
-    kanban: "Kanban",
-    calendar: "Calendar",
-    tree: "Tree",
-};
-
 export default function ViewSwitcher({ available, current, onChange }: Props) {
+    const { t } = useTranslation();
     if (available.length <= 1) return null;
     return (
         <div className="flex gap-0.5 border rounded-md p-0.5 bg-muted/30">
@@ -38,7 +33,7 @@ export default function ViewSwitcher({ available, current, onChange }: Props) {
                         className="gap-1.5 h-7 px-2"
                     >
                         <Icon className="h-3.5 w-3.5" />
-                        {LABELS[mode]}
+                        {t(`list.view.${mode}`)}
                     </Button>
                 );
             })}

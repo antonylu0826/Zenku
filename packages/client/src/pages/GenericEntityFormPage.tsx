@@ -46,6 +46,7 @@ function FieldInput({
   placeholder?: string;
 }) {
   if (field.type === "Boolean") {
+    const { t } = useTranslation();
     return (
       <div className="flex items-center gap-2">
         <Checkbox
@@ -54,7 +55,7 @@ function FieldInput({
           onCheckedChange={(checked) => onChange(checked)}
         />
         <Label htmlFor={field.name} className="font-normal text-muted-foreground">
-          {value ? "Enabled" : "Disabled"}
+          {value ? t("common.yes") : t("common.no")}
         </Label>
       </div>
     );
@@ -111,6 +112,7 @@ function RelationSelect({
   value?: string;
   onChange: (val: string) => void;
   error?: string;
+  t: (key: string) => string;
 }) {
   const path = modelName.charAt(0).toLowerCase() + modelName.slice(1);
   const { data } = useEntityList(path, { pageSize: 100 });
@@ -127,7 +129,7 @@ function RelationSelect({
   return (
     <Select value={value || ""} onValueChange={onChange}>
       <SelectTrigger className={error ? "border-destructive" : ""}>
-        <SelectValue placeholder={`Select ${modelName}...`} />
+        <SelectValue placeholder={`${t("common.selectOption")} ${modelName}...`} />
       </SelectTrigger>
       <SelectContent>
         {options.map((opt) => (
@@ -264,7 +266,7 @@ export default function GenericEntityFormPage({
 
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">Record Details</CardTitle>
+          <CardTitle className="text-base">{t("form.editTitle", { entity: "" }).replace(/ /g, "")}</CardTitle>
           <CardDescription>
             {t("form.required")}
           </CardDescription>
@@ -295,6 +297,7 @@ export default function GenericEntityFormPage({
                       value={formData[field.name] as string}
                       onChange={(val) => handleChange(field.name, val)}
                       error={errs?.[0]}
+                      t={t}
                     />
                   ) : (
                     <FieldInput

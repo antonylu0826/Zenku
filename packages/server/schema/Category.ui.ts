@@ -17,6 +17,7 @@ export default {
     form: {
         layout: [
             { field: "name", label: "Category Name", placeholder: "e.g. Electronics" },
+            { field: "parentId", label: "Parent Category" },
             { field: "description", label: "Description", placeholder: "Brief description of this category", component: "Textarea" },
         ],
     },

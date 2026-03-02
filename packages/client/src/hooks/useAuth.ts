@@ -29,28 +29,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
-    // On mount: attempt silent refresh using the HttpOnly cookie.
-    // If the cookie exists and is valid, we get a new access token + user data.
-    // If not (no cookie, expired, invalid), stay logged out.
+    // On mount: attempt silent refresh using the HttpOnly cookie via centralized API logic.
     useEffect(() => {
         (async () => {
             try {
-                const res = await fetch("/api/auth/refresh", {
-                    method: "POST",
-                    credentials: "include",
-                    headers: { "Content-Type": "application/json" },
-                });
-
-                if (res.ok) {
-                    const data = (await res.json()) as {
-                        token: string;
-                        user: User;
-                    };
-                    setAccessToken(data.token);
-                    setUser(data.user);
-                }
+                // Rely on the standard API logic to recover session
+                const res = await api.get<{ user: User }>("/auth/me");
+                setUser(res.user);
             } catch {
-                // Network error on startup — stay logged out
+                // Not logged in or expired
             } finally {
                 setIsLoading(false);
             }

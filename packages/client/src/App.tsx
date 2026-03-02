@@ -8,6 +8,7 @@ import GenericEntityFormPage from "./pages/GenericEntityFormPage";
 import GenericEntityDetailPage from "./pages/GenericEntityDetailPage";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Toaster } from "sonner";
+import { useTranslation } from "react-i18next";
 
 // Detect ejected pages via Vite's import.meta.glob (eager)
 const ejectedModules = import.meta.glob<{
@@ -75,6 +76,7 @@ function parseRoute(path: string, models: string[]) {
 }
 
 function AppContent() {
+  const { t } = useTranslation();
   const { user, isLoading: authLoading } = useAuth();
   const { data: schema, isLoading: schemaLoading } = useSchema();
   const { path, navigate } = useHashRouter();
@@ -82,7 +84,7 @@ function AppContent() {
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-gray-400">Loading...</div>
+        <div className="text-gray-400">{t("common.loading")}</div>
       </div>
     );
   }
@@ -94,7 +96,7 @@ function AppContent() {
   if (schemaLoading || !schema) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-gray-400">Loading schema...</div>
+        <div className="text-gray-400">{t("common.loading")}</div>
       </div>
     );
   }
@@ -108,9 +110,9 @@ function AppContent() {
     case "home":
       content = (
         <div className="p-6">
-          <h2 className="text-xl font-bold mb-2">Welcome to Zenku</h2>
+          <h2 className="text-xl font-bold mb-2">{t("welcome.title")}</h2>
           <p className="text-gray-500">
-            Select an entity from the sidebar to get started.
+            {t("welcome.subtitle")}
           </p>
         </div>
       );
@@ -149,8 +151,8 @@ function AppContent() {
     default:
       content = (
         <div className="p-6">
-          <h2 className="text-xl font-bold">Not Found</h2>
-          <p className="text-gray-500">The page you're looking for doesn't exist.</p>
+          <h2 className="text-xl font-bold">{t("welcome.notFound")}</h2>
+          <p className="text-gray-500">{t("welcome.notFoundDesc")}</p>
         </div>
       );
   }

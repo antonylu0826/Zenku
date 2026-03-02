@@ -198,7 +198,7 @@ export default function AppLayout({ children, currentEntity, onNavigate }: Props
               className="cursor-pointer hover:text-foreground"
               onClick={() => onNavigate("/")}
             >
-              Home
+              {t("common.home")}
             </span>
             <ChevronRight className="h-3.5 w-3.5" />
             <span className="text-foreground font-medium">{currentEntity}</span>

@@ -45,7 +45,7 @@ function setRefreshCookie(c: any, token: string, maxAgeSec: number): void {
         sameSite: "Lax",
         secure: config.NODE_ENV === "production",
         maxAge: maxAgeSec,
-        path: "/api/auth",
+        path: "/",
     });
 }
 
@@ -55,7 +55,7 @@ function clearRefreshCookie(c: any): void {
         sameSite: "Lax",
         secure: config.NODE_ENV === "production",
         maxAge: 0,
-        path: "/api/auth",
+        path: "/",
     });
 }
 
@@ -101,7 +101,7 @@ authRoutes.post("/login", async (c) => {
     // Lazy cleanup: remove expired tokens for this user (fire-and-forget)
     prisma.refreshToken
         .deleteMany({ where: { userId: user.id, expiresAt: { lte: new Date() } } })
-        .catch(() => {});
+        .catch(() => { });
 
     setRefreshCookie(c, rawRefreshToken, REFRESH_TOKEN_TTL_MS / 1000);
 
@@ -240,7 +240,7 @@ authRoutes.post("/logout", async (c) => {
     if (rawToken) {
         await prisma.refreshToken
             .deleteMany({ where: { token: rawToken } })
-            .catch(() => {});
+            .catch(() => { });
     }
 
     clearRefreshCookie(c);

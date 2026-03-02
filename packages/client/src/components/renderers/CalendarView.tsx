@@ -1,9 +1,10 @@
-import { useMemo } from "react";
-import { Calendar, dateFnsLocalizer } from "react-big-calendar";
+import { useMemo, useState } from "react";
+import { Calendar, dateFnsLocalizer, View } from "react-big-calendar";
 import { format, parse, startOfWeek, getDay } from "date-fns";
-import { enUS } from "date-fns/locale";
+import { enUS, zhTW } from "date-fns/locale";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useTranslation } from "react-i18next";
 
 interface CalendarConfig {
     dateField: string;
@@ -19,23 +20,26 @@ interface Props {
     isLoading: boolean;
 }
 
+const locales = {
+    "en-US": enUS,
+    "zh-TW": zhTW,
+};
+
 const localizer = dateFnsLocalizer({
     format,
     parse,
-    startOfWeek: () => startOfWeek(new Date(), { locale: enUS }),
+    startOfWeek: () => startOfWeek(new Date(), { locale: locales["zh-TW"] }), // Default, will change dynamically inside component if needed or we rely on culture
     getDay,
-    locales: { "en-US": enUS },
+    locales,
 });
 
-interface CalEvent {
-    id: unknown;
-    title: string;
-    start: Date;
-    end: Date;
-    allDay?: boolean;
-}
-
 export default function CalendarView({ rows, calendarConfig, onNavigate, entityPath, isLoading }: Props) {
+    const { t, i18n } = useTranslation();
+    const currentLang = i18n.language === "zh-TW" ? "zh-TW" : "en-US";
+
+    const [date, setDate] = useState(new Date());
+    const [view, setView] = useState<View>("month");
+
     const events = useMemo<CalEvent[]>(() => {
         return rows.map((row) => {
             const start = new Date(row[calendarConfig.dateField] as string);
@@ -53,6 +57,20 @@ export default function CalendarView({ rows, calendarConfig, onNavigate, entityP
         });
     }, [rows, calendarConfig]);
 
+    const messages = useMemo(() => ({
+        today: t("calendar.today"),
+        previous: t("calendar.previous"),
+        next: t("calendar.next"),
+        month: t("calendar.month"),
+        week: t("calendar.week"),
+        day: t("calendar.day"),
+        agenda: t("calendar.agenda"),
+        date: t("calendar.date"),
+        time: t("calendar.time"),
+        event: t("calendar.event"),
+        noEventsInRange: t("calendar.noEventsInRange"),
+    }), [t]);
+
     if (isLoading) {
         return (
             <div className="space-y-2">
@@ -67,8 +85,13 @@ export default function CalendarView({ rows, calendarConfig, onNavigate, entityP
             <Calendar
                 localizer={localizer}
                 events={events}
-                defaultView="month"
+                view={view}
                 views={["month", "week", "day"]}
+                date={date}
+                onView={(newView) => setView(newView)}
+                onNavigate={(newDate) => setDate(newDate)}
+                culture={currentLang}
+                messages={messages}
                 selectable
                 onSelectEvent={(event: CalEvent) => {
                     onNavigate(`/${entityPath}/${event.id}`);
@@ -80,4 +103,12 @@ export default function CalendarView({ rows, calendarConfig, onNavigate, entityP
             />
         </div>
     );
+}
+
+interface CalEvent {
+    id: unknown;
+    title: string;
+    start: Date;
+    end: Date;
+    allDay?: boolean;
 }

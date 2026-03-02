@@ -11,7 +11,14 @@
         "search": "Search",
         "export": "Export CSV",
         "yes": "Yes",
-        "no": "No"
+        "no": "No",
+        "home": "Home"
+    },
+    "welcome": {
+        "title": "Welcome to Zenku",
+        "subtitle": "Select an entity from the sidebar to get started.",
+        "notFound": "Not Found",
+        "notFoundDesc": "The page you're looking for doesn't exist."
     },
     "auth": {
         "loginTitle": "Sign in to Zenku",
@@ -39,7 +46,13 @@
         "confirmDeleteMany": "Delete {{count}} {{entity}}?",
         "confirmDeleteManyDesc": "This action cannot be undone. {{count}} record(s) will be permanently deleted.",
         "deleteCount": "Delete {{count}} record",
-        "deleteCount_plural": "Delete {{count}} records"
+        "deleteCount_plural": "Delete {{count}} records",
+        "view": {
+            "list": "Table",
+            "kanban": "Kanban",
+            "calendar": "Calendar",
+            "tree": "Tree"
+        }
     },
     "form": {
         "createTitle": "Create {{entity}}",
@@ -78,5 +91,18 @@
         "label": "Language",
         "en": "English",
         "zhTW": "繁體中文"
+    },
+    "calendar": {
+        "today": "Today",
+        "previous": "Previous",
+        "next": "Next",
+        "month": "Month",
+        "week": "Week",
+        "day": "Day",
+        "agenda": "Agenda",
+        "date": "Date",
+        "time": "Time",
+        "event": "Event",
+        "noEventsInRange": "There are no events in this range"
     }
 }

@@ -96,6 +96,8 @@ model Product {
   id            String   @id() @default(cuid())
   code          String   @unique()
   barcode       String?
+  spec          String?
+  size          String?
   name          String
   price         Float
   stockQuantity Int      @default(0)
