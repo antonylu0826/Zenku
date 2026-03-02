@@ -46,6 +46,48 @@ async function main() {
 
   console.log(`Categories: ${electronics.name}, ${books.name}`);
 
+  // Create Warehouses
+  const mainWH = await prisma.warehouse.upsert({
+    where: { code: "WH-001" },
+    update: {},
+    create: { name: "台北總庫", code: "WH-001", location: "台北市內湖區", ownerId: admin.id },
+  });
+  const subWH = await prisma.warehouse.upsert({
+    where: { code: "WH-002" },
+    update: {},
+    create: { name: "台中分庫", code: "WH-002", location: "台中市西屯區", ownerId: admin.id },
+  });
+  console.log("Warehouses seeded");
+
+  // Create Suppliers
+  const supplierA = await prisma.supplier.upsert({
+    where: { code: "SUP-001" },
+    update: {},
+    create: {
+      name: "力晶電子股份有限公司",
+      code: "SUP-001",
+      contactName: "陳經理",
+      phone: "02-2790-1234",
+      taxId: "12345678",
+      ownerId: admin.id
+    },
+  });
+  console.log("Suppliers seeded");
+
+  // Create Customers
+  const customerA = await prisma.customer.upsert({
+    where: { code: "CUST-001" },
+    update: {},
+    create: {
+      name: "國立台灣大學",
+      code: "CUST-001",
+      contactName: "王教授",
+      phone: "02-3366-4321",
+      ownerId: admin.id
+    },
+  });
+  console.log("Customers seeded");
+
   // Create products
   const products = [
     {
@@ -135,6 +177,46 @@ async function main() {
     });
   }
   console.log("Category tree seeded");
+
+  // ─── Purchase Orders ────────────────────────────────────────────────────────
+  const po1 = await prisma.purchaseOrder.upsert({
+    where: { orderNumber: "PO-20240301" },
+    update: {},
+    create: {
+      orderNumber: "PO-20240301",
+      status: "COMPLETED",
+      supplierId: supplierA.id,
+      totalAmount: 299.9,
+      ownerId: admin.id,
+      items: {
+        create: [
+          { productId: (await prisma.product.findUnique({ where: { code: "ELEC-001" } }))!.id, quantity: 10, unitPrice: 29.99 }
+        ]
+      }
+    }
+  });
+  console.log("Example Purchase Order seeded");
+
+  // ─── Inventory Transactions ────────────────────────────────────────────────
+  // Add stock for the completed PO
+  await prisma.inventoryTransaction.create({
+    data: {
+      type: "PURCHASE",
+      quantity: 10,
+      productId: (await prisma.product.findUnique({ where: { code: "ELEC-001" } }))!.id,
+      warehouseId: mainWH.id,
+      referenceId: po1.id,
+      referenceType: "PurchaseOrder",
+      ownerId: admin.id,
+      notes: "初始入庫範例"
+    }
+  });
+
+  // Update product stock quantity
+  await prisma.product.update({
+    where: { code: "ELEC-001" },
+    data: { stockQuantity: 10 }
+  });
 
   console.log("\nSeed completed!");
   console.log("Admin login: admin@zenku.dev / admin123");

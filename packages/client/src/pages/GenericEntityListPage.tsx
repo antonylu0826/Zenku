@@ -107,6 +107,17 @@ function formatValue(value: unknown, field: FieldMeta, t: (key: string) => strin
             maximumFractionDigits: 2,
         });
     }
+    if (field.isEnum && field.enumValues) {
+        const knownEnums = ["Role", "TaskStatus", "OrderStatus", "TransactionType"];
+        for (const enumName of knownEnums) {
+            const key = `enums.${enumName}.${value}`;
+            const translated = t(key);
+            if (translated !== key) {
+                return <Badge variant="outline">{translated}</Badge>;
+            }
+        }
+        return <Badge variant="outline">{String(value)}</Badge>;
+    }
     if (typeof value === "object") {
         const obj = value as Record<string, unknown>;
         return (
@@ -211,7 +222,11 @@ export default function GenericEntityListPage({
         if (!meta) return [];
         return uiColumns
             ? uiColumns
-                .map((colName) => meta.fields.find((f) => f.name === colName))
+                .map((col) => {
+                    // col can be a string (field name) or an object { name, label, type }
+                    const fieldName = typeof col === "string" ? col : (col as any).name;
+                    return meta.fields.find((f) => f.name === fieldName);
+                })
                 .filter((f): f is NonNullable<typeof f> => f !== undefined)
             : meta.fields.filter(
                 (f) =>
@@ -446,6 +461,25 @@ export default function GenericEntityListPage({
                             onSort={handleSort}
                             formatValue={(val, f) => formatValue(val, f, t)}
                             formatHeader={(fieldMeta: FieldMeta) => tEntityField(meta, fieldMeta.name)}
+                            getCellValue={(row, col) => {
+                                // For uiColumns with type="relation", resolve the nested relation object field
+                                if (uiColumns) {
+                                    const uiCol = uiColumns.find((c) =>
+                                        (typeof c === "string" ? c : (c as any).name) === col.name
+                                    );
+                                    if (uiCol && typeof uiCol !== "string" && (uiCol as any).type === "relation") {
+                                        const relField = (uiCol as any).relationField as string;
+                                        // relation entity name: e.g. "productId" -> "product", or use relationEntity
+                                        const relEntity = (uiCol as any).relationEntity as string;
+                                        const relKey = relEntity
+                                            ? relEntity.charAt(0).toLowerCase() + relEntity.slice(1)
+                                            : col.name.replace(/Id$/, "");
+                                        const relObj = row[relKey] as Record<string, unknown> | undefined;
+                                        return relObj?.[relField] ?? row[col.name];
+                                    }
+                                }
+                                return row[col.name];
+                            }}
                             deleteId={deleteId}
                             onDeleteRequest={setDeleteId}
                             onDeleteCancel={() => setDeleteId(null)}

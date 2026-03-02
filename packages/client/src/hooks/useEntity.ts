@@ -28,10 +28,12 @@ export function useEntityList(entityPath: string, params: ListParams = {}, optio
   });
 }
 
-export function useEntityDetail(entityPath: string, id: string) {
+export function useEntityDetail(entityPath: string, id: string, options?: { include?: string }) {
+  const include = options?.include;
+  const query = include ? `?include=${encodeURIComponent(include)}` : "";
   return useQuery({
-    queryKey: ["entity", entityPath, id],
-    queryFn: () => api.get<Record<string, unknown>>(`/${entityPath}/${id}`),
+    queryKey: ["entity", entityPath, id, include],
+    queryFn: () => api.get<Record<string, unknown>>(`/${entityPath}/${id}${query}`),
     enabled: !!id,
   });
 }

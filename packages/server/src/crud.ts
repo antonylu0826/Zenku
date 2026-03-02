@@ -310,9 +310,26 @@ export function createCrudRoutes() {
             const db = getEnhancedPrisma(user);
             const delegate = getModelDelegate(db, name);
 
+            // Build include from ?include= query or use default relation includes
+            const includeParam = c.req.query("include");
+            let includeArg: Record<string, unknown> | undefined;
+            if (includeParam) {
+                includeArg = {};
+                for (const rel of includeParam.split(",").map((s) => s.trim()).filter(Boolean)) {
+                    const relField = model.fields.find((f) => f.name === rel && f.relationName);
+                    if (relField) {
+                        includeArg[rel] = relField.type === "User"
+                            ? { select: { id: true, email: true, name: true, role: true } }
+                            : true;
+                    }
+                }
+            } else {
+                includeArg = includeRelations;
+            }
+
             const item = await delegate.findUnique({
                 where: { id: c.req.param("id") },
-                include: includeRelations,
+                include: includeArg,
             });
 
             if (!item) throw Errors.notFound(name);
@@ -332,6 +349,8 @@ export function createCrudRoutes() {
             // Zod validation
             const validation = getCreateSchema(name).safeParse(body);
             if (!validation.success) {
+                console.error(`[CRUD] ${name} validation failed:`, JSON.stringify(validation.error.flatten().fieldErrors, null, 2));
+                console.error(`[CRUD] Received body keys:`, Object.keys(body));
                 throw Errors.validation(validation.error.flatten().fieldErrors);
             }
 
@@ -341,6 +360,13 @@ export function createCrudRoutes() {
                 if (field.relationName) continue;
                 if (field.name in body) {
                     data[field.name] = body[field.name];
+                }
+            }
+            // Also pass nested write objects (e.g. items for sub-models)
+            const scalarFieldNames = new Set(model.fields.filter(f => !f.relationName).map(f => f.name));
+            for (const key of Object.keys(body)) {
+                if (!scalarFieldNames.has(key) && typeof body[key] === "object" && body[key] !== null) {
+                    data[key] = body[key];
                 }
             }
 
@@ -375,6 +401,13 @@ export function createCrudRoutes() {
                 if (field.isId) continue;
                 if (field.name in body) {
                     data[field.name] = body[field.name];
+                }
+            }
+            // Also pass nested write objects (e.g. items for sub-models)
+            const scalarFieldNamesPut = new Set(model.fields.filter(f => !f.relationName).map(f => f.name));
+            for (const key of Object.keys(body)) {
+                if (!scalarFieldNamesPut.has(key) && typeof body[key] === "object" && body[key] !== null) {
+                    data[key] = body[key];
                 }
             }
 

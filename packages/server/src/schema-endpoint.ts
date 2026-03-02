@@ -4,7 +4,7 @@ import type { ModelMeta, FieldMeta, FieldType, UiConfig } from "@zenku/core";
 import pluralize from "pluralize";
 import { join } from "path";
 
-const EXCLUDED_MODELS = ["User", "RefreshToken"];
+const EXCLUDED_MODELS = ["User", "RefreshToken", "PurchaseOrderItem", "SalesOrderItem"];
 
 // Read-only fields: auto-managed by Prisma
 const READ_ONLY_FIELD_NAMES = new Set(["createdAt", "updatedAt"]);

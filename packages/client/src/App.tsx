@@ -30,7 +30,7 @@ function getEjectedPage(
   pageType: "list" | "form" | "detail",
 ): ComponentType<any> | undefined {
   const suffix = pageType === "list" ? "ListPage" : pageType === "form" ? "FormPage" : "DetailPage";
-  return ejectedPages[`${entityName}${suffix} `];
+  return ejectedPages[`${entityName}${suffix}`];
 }
 
 function useHashRouter() {

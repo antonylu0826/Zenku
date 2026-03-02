@@ -1,4 +1,4 @@
-{
+﻿{
     "common": {
         "save": "Save",
         "cancel": "Cancel",
@@ -13,23 +13,23 @@
         "yes": "Yes",
         "no": "No",
         "home": "Home",
-        "selectOption": "Select",
+        "selectOption": "Select…",
         "details": "Details"
     },
     "welcome": {
         "title": "Welcome to Zenku",
-        "subtitle": "Select an entity from the sidebar to get started.",
-        "notFound": "Not Found",
-        "notFoundDesc": "The page you're looking for doesn't exist."
+        "subtitle": "Select an entity from the left menu to get started.",
+        "notFound": "Page Not Found",
+        "notFoundDesc": "The page you are looking for does not exist."
     },
     "auth": {
         "loginTitle": "Sign in to Zenku",
-        "loginSubtitle": "Enter your credentials to continue",
+        "loginSubtitle": "Enter your credentials",
         "email": "Email",
         "password": "Password",
         "name": "Name",
-        "login": "Sign in",
-        "logout": "Logout",
+        "login": "Sign In",
+        "logout": "Sign Out",
         "loggingIn": "Signing in…",
         "invalidCredentials": "Invalid email or password",
         "profile": "Profile",
@@ -43,10 +43,10 @@
         "previous": "Previous",
         "next": "Next",
         "selected": "{{count}} selected",
-        "deleteSelected": "Delete selected",
-        "deselectAll": "Deselect all",
+        "deleteSelected": "Delete Selected",
+        "deselectAll": "Deselect All",
         "confirmDeleteMany": "Delete {{count}} {{entity}}?",
-        "confirmDeleteManyDesc": "This action cannot be undone. {{count}} record(s) will be permanently deleted.",
+        "confirmDeleteManyDesc": "This action cannot be undone. {{count}} records will be permanently deleted.",
         "deleteCount": "Delete {{count}} record",
         "deleteCount_plural": "Delete {{count}} records",
         "view": {
@@ -57,18 +57,18 @@
         }
     },
     "form": {
-        "createTitle": "Create {{entity}}",
+        "createTitle": "New {{entity}}",
         "editTitle": "Edit {{entity}}",
         "saving": "Saving…",
         "required": "This field is required",
-        "selectOption": "Select an option",
+        "selectOption": "Select…",
         "searchRelation": "Search…",
         "validationError": "Please fix the errors above",
-        "fieldErrors": "Validation error",
+        "fieldErrors": "Validation Errors",
         "enterField": "Enter {{field}}"
     },
     "detail": {
-        "backToList": "Back to {{entity}}",
+        "backToList": "Back to {{entity}} List",
         "editRecord": "Edit",
         "deleteRecord": "Delete",
         "confirmDelete": "Delete {{entity}}?",
@@ -78,11 +78,11 @@
         "created": "{{entity}} created successfully",
         "updated": "{{entity}} updated successfully",
         "deleted": "{{entity}} deleted successfully",
-        "deletedMany": "{{count}} record(s) deleted",
+        "deletedMany": "{{count}} records deleted",
         "statusUpdated": "Status updated",
         "error": "An error occurred. Please try again.",
         "deleteError": "Failed to delete {{entity}}",
-        "uploadSuccess": "{{filename}} uploaded",
+        "uploadSuccess": "{{filename}} uploaded successfully",
         "uploadError": "Upload failed"
     },
     "upload": {
@@ -93,7 +93,7 @@
     "language": {
         "label": "Language",
         "en": "English",
-        "zhTW": "繁體中文"
+        "zhTW": "Traditional Chinese"
     },
     "calendar": {
         "today": "Today",
@@ -106,7 +106,32 @@
         "date": "Date",
         "time": "Time",
         "event": "Event",
-        "noEventsInRange": "There are no events in this range"
+        "noEventsInRange": "No events in this range"
+    },
+    "enums": {
+        "Role": {
+            "ADMIN": "Administrator",
+            "USER": "User"
+        },
+        "TaskStatus": {
+            "TODO": "To Do",
+            "IN_PROGRESS": "In Progress",
+            "DONE": "Done"
+        },
+        "OrderStatus": {
+            "DRAFT": "Draft",
+            "PENDING": "Pending",
+            "CONFIRMED": "Confirmed",
+            "COMPLETED": "Completed",
+            "CANCELLED": "Cancelled"
+        },
+        "TransactionType": {
+            "PURCHASE": "Purchase In",
+            "SALE": "Sale Out",
+            "ADJUSTMENT": "Adjustment",
+            "TRANSFER": "Transfer",
+            "RETURN": "Return"
+        }
     },
     "models": {
         "User": {
@@ -114,10 +139,10 @@
             "plural": "Users",
             "fields": {
                 "id": "User ID",
-                "email": "Email Address",
-                "name": "Full Name",
+                "email": "Email",
+                "name": "Name",
                 "password": "Password",
-                "role": "System Role",
+                "role": "Role",
                 "products": "Products",
                 "tasks": "Tasks",
                 "refreshTokens": "Refresh Tokens",
@@ -147,7 +172,7 @@
                 "products": "Products",
                 "parentId": "Parent Category ID",
                 "parent": "Parent Category",
-                "children": "Subcategories",
+                "children": "Sub-categories",
                 "createdAt": "Created At",
                 "updatedAt": "Updated At"
             }
@@ -203,7 +228,7 @@
                 "id": "Product ID",
                 "code": "Product Code",
                 "barcode": "Barcode",
-                "spec": "Specification",
+                "spec": "Spec",
                 "size": "Size",
                 "name": "Product Name",
                 "price": "Price",
@@ -215,6 +240,121 @@
                 "categoryId": "Category ID",
                 "owner": "Owner",
                 "ownerId": "Owner ID",
+                "createdAt": "Created At",
+                "updatedAt": "Updated At"
+            }
+        },
+        "PurchaseOrder": {
+            "name": "Purchase Order",
+            "plural": "Purchase Orders",
+            "fields": {
+                "id": "ID",
+                "orderNumber": "Order Number",
+                "orderDate": "Order Date",
+                "status": "Status",
+                "totalAmount": "Total Amount",
+                "notes": "Notes",
+                "supplierId": "Supplier ID",
+                "supplier": "Supplier",
+                "createdAt": "Created At",
+                "updatedAt": "Updated At"
+            }
+        },
+        "PurchaseOrderItem": {
+            "name": "Purchase Order Item",
+            "plural": "Purchase Order Items",
+            "fields": {
+                "id": "ID",
+                "productId": "Product ID",
+                "product": "Product",
+                "quantity": "Quantity",
+                "unitPrice": "Unit Price",
+                "totalPrice": "Subtotal"
+            }
+        },
+        "SalesOrder": {
+            "name": "Sales Order",
+            "plural": "Sales Orders",
+            "fields": {
+                "id": "ID",
+                "orderNumber": "Order Number",
+                "orderDate": "Order Date",
+                "status": "Status",
+                "totalAmount": "Total Amount",
+                "notes": "Notes",
+                "customerId": "Customer ID",
+                "customer": "Customer",
+                "createdAt": "Created At",
+                "updatedAt": "Updated At"
+            }
+        },
+        "SalesOrderItem": {
+            "name": "Sales Order Item",
+            "plural": "Sales Order Items",
+            "fields": {
+                "id": "ID",
+                "productId": "Product ID",
+                "product": "Product",
+                "quantity": "Quantity",
+                "unitPrice": "Unit Price",
+                "totalPrice": "Subtotal"
+            }
+        },
+        "InventoryTransaction": {
+            "name": "Inventory Transaction",
+            "plural": "Inventory Transactions",
+            "fields": {
+                "id": "ID",
+                "type": "Type",
+                "quantity": "Quantity",
+                "productId": "Product ID",
+                "product": "Product",
+                "warehouseId": "Warehouse ID",
+                "warehouse": "Warehouse",
+                "referenceId": "Reference ID",
+                "referenceType": "Reference Type",
+                "notes": "Notes",
+                "createdAt": "Transaction Time"
+            }
+        },
+        "Supplier": {
+            "name": "Supplier",
+            "plural": "Suppliers",
+            "fields": {
+                "id": "ID",
+                "name": "Supplier Name",
+                "code": "Supplier Code",
+                "contactName": "Contact Name",
+                "phone": "Phone",
+                "email": "Email",
+                "address": "Address",
+                "createdAt": "Created At",
+                "updatedAt": "Updated At"
+            }
+        },
+        "Customer": {
+            "name": "Customer",
+            "plural": "Customers",
+            "fields": {
+                "id": "ID",
+                "name": "Customer Name",
+                "code": "Customer Code",
+                "contactName": "Contact Name",
+                "phone": "Phone",
+                "email": "Email",
+                "address": "Address",
+                "createdAt": "Created At",
+                "updatedAt": "Updated At"
+            }
+        },
+        "Warehouse": {
+            "name": "Warehouse",
+            "plural": "Warehouses",
+            "fields": {
+                "id": "ID",
+                "name": "Warehouse Name",
+                "code": "Code",
+                "location": "Location",
                 "createdAt": "Created At",
                 "updatedAt": "Updated At"
             }

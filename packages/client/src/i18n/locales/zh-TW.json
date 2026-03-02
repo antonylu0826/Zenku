@@ -1,4 +1,4 @@
-{
+﻿{
     "common": {
         "save": "儲存",
         "cancel": "取消",
@@ -108,6 +108,31 @@
         "event": "事件",
         "noEventsInRange": "此範圍內無事件"
     },
+    "enums": {
+        "Role": {
+            "ADMIN": "管理員",
+            "USER": "一般使用者"
+        },
+        "TaskStatus": {
+            "TODO": "待處理",
+            "IN_PROGRESS": "進行中",
+            "DONE": "已完成"
+        },
+        "OrderStatus": {
+            "DRAFT": "草稿",
+            "PENDING": "待確認",
+            "CONFIRMED": "已確認",
+            "COMPLETED": "已完成",
+            "CANCELLED": "已取消"
+        },
+        "TransactionType": {
+            "PURCHASE": "採購入庫",
+            "SALE": "銷貨出庫",
+            "ADJUSTMENT": "庫存調整",
+            "TRANSFER": "庫存移轉",
+            "RETURN": "退貨"
+        }
+    },
     "models": {
         "User": {
             "name": "使用者",
@@ -215,6 +240,122 @@
                 "categoryId": "分類編號",
                 "owner": "擁有者",
                 "ownerId": "擁有者編號",
+                "createdAt": "建立時間",
+                "updatedAt": "更新時間"
+            }
+        },
+        "PurchaseOrder": {
+            "name": "採購單",
+            "plural": "採購管理",
+            "fields": {
+                "id": "編號",
+                "orderNumber": "採購單號",
+                "orderDate": "採購日期",
+                "status": "狀態",
+                "totalAmount": "總金額",
+                "notes": "備註",
+                "supplierId": "供應商編號",
+                "supplier": "供應商",
+                "createdAt": "建立時間",
+                "updatedAt": "更新時間"
+            }
+        },
+        "PurchaseOrderItem": {
+            "name": "採購明細",
+            "plural": "採購明細",
+            "fields": {
+                "id": "編號",
+                "productId": "產品編號",
+                "product": "產品",
+                "quantity": "數量",
+                "unitPrice": "單價",
+                "totalPrice": "小計"
+            }
+        },
+        "SalesOrder": {
+            "name": "銷貨單",
+            "plural": "銷貨管理",
+            "fields": {
+                "id": "編號",
+                "orderNumber": "銷貨單號",
+                "orderDate": "銷貨日期",
+                "status": "狀態",
+                "totalAmount": "總金額",
+                "notes": "備註",
+                "customerId": "客戶編號",
+                "customer": "客戶",
+                "createdAt": "建立時間",
+                "updatedAt": "更新時間"
+            }
+        },
+        "SalesOrderItem": {
+            "name": "銷貨明細",
+            "plural": "銷貨明細",
+            "fields": {
+                "id": "編號",
+                "productId": "產品編號",
+                "product": "產品",
+                "quantity": "數量",
+                "unitPrice": "單價",
+                "totalPrice": "小計"
+            }
+        },
+        "InventoryTransaction": {
+            "name": "庫存異動",
+            "plural": "庫存異動",
+            "fields": {
+                "id": "編號",
+                "type": "類型",
+                "quantity": "數量",
+                "productId": "產品編號",
+                "product": "產品",
+                "warehouseId": "倉庫編號",
+                "warehouse": "倉庫",
+                "referenceId": "單據編號",
+                "referenceType": "單據類型",
+                "referenceOrderNumber": "來源單號",
+                "notes": "備註",
+                "createdAt": "異動時間"
+            }
+        },
+        "Supplier": {
+            "name": "供應商",
+            "plural": "供應商管理",
+            "fields": {
+                "id": "編號",
+                "name": "供應商名稱",
+                "code": "供應商代碼",
+                "contactName": "聯絡人",
+                "phone": "電話",
+                "email": "電子郵件",
+                "address": "地址",
+                "createdAt": "建立時間",
+                "updatedAt": "更新時間"
+            }
+        },
+        "Customer": {
+            "name": "客戶",
+            "plural": "客戶管理",
+            "fields": {
+                "id": "編號",
+                "name": "客戶名稱",
+                "code": "客戶代碼",
+                "contactName": "聯絡人",
+                "phone": "電話",
+                "email": "電子郵件",
+                "address": "地址",
+                "createdAt": "建立時間",
+                "updatedAt": "更新時間"
+            }
+        },
+        "Warehouse": {
+            "name": "倉庫",
+            "plural": "倉庫管理",
+            "fields": {
+                "id": "編號",
+                "name": "倉庫名稱",
+                "code": "編號",
+                "location": "位置",
                 "createdAt": "建立時間",
                 "updatedAt": "更新時間"
             }

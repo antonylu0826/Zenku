@@ -45,6 +45,7 @@ interface DataTableProps {
     onSort: (field: string) => void;
     formatValue: (value: unknown, field: FieldMeta) => string | React.ReactNode;
     formatHeader?: (field: FieldMeta) => string;
+    getCellValue?: (row: Record<string, unknown>, col: FieldMeta) => unknown;
     deleteId: string | null;
     onDeleteRequest: (id: string) => void;
     onDeleteCancel: () => void;
@@ -66,6 +67,7 @@ export default function DataTable({
     onSort,
     formatValue,
     formatHeader,
+    getCellValue,
     deleteId,
     onDeleteRequest,
     onDeleteCancel,
@@ -188,7 +190,7 @@ export default function DataTable({
                                     </TableCell>
                                     {columns.map((col) => (
                                         <TableCell key={col.name}>
-                                            {formatValue(row[col.name], col)}
+                                            {formatValue(getCellValue ? getCellValue(row, col) : row[col.name], col)}
                                         </TableCell>
                                     ))}
                                     <TableCell className="text-right">

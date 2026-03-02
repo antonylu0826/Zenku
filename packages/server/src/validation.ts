@@ -41,9 +41,10 @@ function fieldToZod(
             schema = z.unknown();
     }
 
-    // Optional if not required or if it's an update (all fields optional for PATCH semantics)
-    if (!field.isRequired || isUpdate) {
-        schema = schema.optional();
+    // Optional if not required, has a default value, or if it's an update (all fields optional for PATCH semantics)
+    const hasDefault = field.default !== undefined && field.default !== null;
+    if (!field.isRequired || hasDefault || isUpdate) {
+        schema = schema.nullable().optional();
     }
 
     return schema;
@@ -66,7 +67,7 @@ export function getCreateSchema(modelName: string): z.ZodObject<any> {
         }
     }
 
-    return z.object(shape);
+    return z.object(shape).passthrough();
 }
 
 /**
@@ -86,5 +87,5 @@ export function getUpdateSchema(modelName: string): z.ZodObject<any> {
         }
     }
 
-    return z.object(shape).partial();
+    return z.object(shape).partial().passthrough();
 }
