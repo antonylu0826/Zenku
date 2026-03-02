@@ -15,11 +15,22 @@ import { createRateLimiter } from "./middleware/rate-limit";
 
 const app = new Hono();
 
-// Security headers (X-Frame-Options, X-Content-Type-Options, etc.)
-app.use("*", secureHeaders());
+// Security headers - only in production or with careful config
+if (config.NODE_ENV === "production") {
+    app.use("*", secureHeaders());
+}
 
 // Logging
 app.use("*", logger());
+
+// Cookie Debug Middleware
+app.use("*", async (c, next) => {
+    const cookieHeader = c.req.header("Cookie");
+    if (c.req.path.includes("/auth/refresh") || c.req.path.includes("/auth/me")) {
+        console.debug(`[Cookie Debug] ${c.req.method} ${c.req.path} - Cookie header: ${cookieHeader || "NONE"}`);
+    }
+    await next();
+});
 
 // CORS — configured from env, with credentials support for HttpOnly cookies
 const allowedOrigins = config.CORS_ORIGIN.split(",").map((o) => o.trim());

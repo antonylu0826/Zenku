@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useEntityTranslation } from "@/hooks/useEntityTranslation";
-import { useModelMeta } from "../hooks/useSchema";
+import { useAuth } from "../hooks/useAuth";
+import { useSchema, useModelMeta } from "../hooks/useSchema";
 import {
     useEntityList,
     useEntityDelete,
@@ -181,6 +182,8 @@ export default function GenericEntityListPage({
         setSelectedIds(new Set());
     }, [page, search, sort, sortDir]);
 
+    const { isLoading: isAuthLoading } = useAuth();
+
     // ─── Data fetching ────────────────────────────────────────────────────────
     const { data, isLoading } = useEntityList(entityPath, {
         page,
@@ -188,13 +191,13 @@ export default function GenericEntityListPage({
         sort,
         sortDir,
         search: search || undefined,
-    });
+    }, { enabled: !!meta && !isAuthLoading });
 
     // For non-list views: fetch all records (up to 500)
     const { data: allData, isLoading: allDataLoading } = useEntityList(
         entityPath,
         { page: 1, pageSize: 500 },
-        { enabled: isNonListView },
+        { enabled: isNonListView && !!meta && !isAuthLoading },
     );
 
     // ─── Mutations ────────────────────────────────────────────────────────────
@@ -202,27 +205,37 @@ export default function GenericEntityListPage({
     const batchDeleteMutation = useEntityBatchDelete(entityPath);
     const updateMutation = useEntityUpdate(entityPath);
 
-    if (!meta) return null;
+    // Determine column metadata
+    const uiColumns = meta?.ui?.list?.columns;
+    const columns = useMemo(() => {
+        if (!meta) return [];
+        return uiColumns
+            ? uiColumns
+                .map((colName) => meta.fields.find((f) => f.name === colName))
+                .filter((f): f is NonNullable<typeof f> => f !== undefined)
+            : meta.fields.filter(
+                (f) =>
+                    !f.isId &&
+                    f.name !== "createdAt" &&
+                    f.name !== "updatedAt" &&
+                    !meta.fields.some(
+                        (rel) =>
+                            rel.isRelation &&
+                            !rel.isList &&
+                            f.name === rel.name + "Id",
+                    ) &&
+                    !f.isList,
+            );
+    }, [meta, uiColumns]);
 
-    // ─── Column resolution ────────────────────────────────────────────────────
-    const uiColumns = meta.ui?.list?.columns;
-    const columns = uiColumns
-        ? uiColumns
-            .map((colName) => meta.fields.find((f) => f.name === colName))
-            .filter((f): f is NonNullable<typeof f> => f !== undefined)
-        : meta.fields.filter(
-            (f) =>
-                !f.isId &&
-                f.name !== "createdAt" &&
-                f.name !== "updatedAt" &&
-                !meta.fields.some(
-                    (rel) =>
-                        rel.isRelation &&
-                        !rel.isList &&
-                        f.name === rel.name + "Id",
-                ) &&
-                !f.isList,
+    if (!meta || (isLoading && !data)) {
+        return (
+            <div className="p-6 space-y-4">
+                <div className="h-8 w-48 bg-muted animate-pulse rounded" />
+                <div className="h-[400px] w-full bg-muted animate-pulse rounded" />
+            </div>
         );
+    }
 
     // ─── Handlers ─────────────────────────────────────────────────────────────
     const handleSort = (field: string) => {
@@ -294,7 +307,7 @@ export default function GenericEntityListPage({
         );
     };
 
-    const exportUrl = `/ api / ${entityPath}/export?format=csv${search ? `&search=${encodeURIComponent(search)}` : ""}& sort=${sort}& sortDir=${sortDir} `;
+    const exportUrl = `/api/${entityPath}/export?format=csv${search ? `&search=${encodeURIComponent(search)}` : ""}&sort=${sort}&sortDir=${sortDir}`;
 
     return (
         <div className="p-6 space-y-4">
@@ -423,7 +436,7 @@ export default function GenericEntityListPage({
                             entityName={entityName}
                             entityPath={entityPath}
                             columns={columns}
-                            rows={data?.data ?? []}
+                            rows={isLoading ? [] : (data?.data ?? [])}
                             isLoading={isLoading}
                             selectedIds={selectedIds}
                             onToggleSelect={toggleSelect}

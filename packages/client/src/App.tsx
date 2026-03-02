@@ -79,7 +79,7 @@ function parseRoute(path: string, models: string[]) {
 function AppContent() {
   const { t } = useTranslation();
   const { user, isLoading } = useAuth();
-  const { data: schema, isLoading: isSchemaLoading } = useSchema();
+  const { data: schema, isLoading: isSchemaLoading } = useSchema({ enabled: !isLoading });
   const { path, navigate } = useHashRouter();
   const { tEntityPlural, tEntityName } = useEntityTranslation();
 
@@ -163,9 +163,9 @@ function AppContent() {
     case "list": {
       const Ejected = getEjectedPage(route.entityName, "list");
       content = Ejected ? (
-        <Ejected onNavigate={navigate} />
+        <Ejected key={route.entityName} onNavigate={navigate} />
       ) : (
-        <GenericEntityListPage entityName={route.entityName} onNavigate={navigate} />
+        <GenericEntityListPage key={route.entityName} entityName={route.entityName} onNavigate={navigate} />
       );
       break;
     }
@@ -173,9 +173,9 @@ function AppContent() {
     case "form": {
       const Ejected = getEjectedPage(route.entityName, "form");
       content = Ejected ? (
-        <Ejected entityId={route.entityId} onNavigate={navigate} />
+        <Ejected key={route.entityName} entityId={route.entityId} onNavigate={navigate} />
       ) : (
-        <GenericEntityFormPage entityName={route.entityName} entityId={route.entityId} onNavigate={navigate} />
+        <GenericEntityFormPage key={route.entityName} entityName={route.entityName} entityId={route.entityId} onNavigate={navigate} />
       );
       break;
     }
@@ -183,9 +183,9 @@ function AppContent() {
     case "detail": {
       const Ejected = getEjectedPage(route.entityName, "detail");
       content = Ejected ? (
-        <Ejected entityId={route.entityId!} onNavigate={navigate} />
+        <Ejected key={route.entityName} entityId={route.entityId!} onNavigate={navigate} />
       ) : (
-        <GenericEntityDetailPage entityName={route.entityName} entityId={route.entityId!} onNavigate={navigate} />
+        <GenericEntityDetailPage key={route.entityName} entityName={route.entityName} entityId={route.entityId!} onNavigate={navigate} />
       );
       break;
     }

@@ -89,7 +89,7 @@ function buildListWhere(
     for (const field of model.fields) {
         if (field.relationName || field.isId) continue;
         const val = c.req.query(field.name);
-        if (val === undefined) continue;
+        if (val === undefined || RESERVED_PARAMS.has(field.name)) continue;
 
         if (field.type === "Boolean") {
             where[field.name] = val === "true";
@@ -133,33 +133,31 @@ export function createCrudRoutes() {
         const includeRelations =
             relationFields.length > 0
                 ? Object.fromEntries(
-                      relationFields.map((f) => {
-                          const targetModel = model.fields.find(
-                              (mf) => mf.name === f,
-                          )?.type;
-                          if (targetModel === "User") {
-                              return [
-                                  f,
-                                  {
-                                      select: {
-                                          id: true,
-                                          email: true,
-                                          name: true,
-                                          role: true,
-                                      },
-                                  },
-                              ];
-                          }
-                          return [f, true];
-                      }),
-                  )
+                    relationFields.map((f) => {
+                        const targetModel = model.fields.find(
+                            (mf) => mf.name === f,
+                        )?.type;
+                        if (targetModel === "User") {
+                            return [
+                                f,
+                                {
+                                    select: {
+                                        id: true,
+                                        email: true,
+                                        name: true,
+                                        role: true,
+                                    },
+                                },
+                            ];
+                        }
+                        return [f, true];
+                    }),
+                )
                 : undefined;
 
         // GET list — /api/:model
         app.get(`/${path}`, async (c) => {
-            const user = (c as any).get("user") as
-                | { id: string; role: string }
-                | undefined;
+            const user = (c as any).get("user") || null;
             const db = getEnhancedPrisma(user);
             const delegate = getModelDelegate(db, name);
 
@@ -190,13 +188,13 @@ export function createCrudRoutes() {
                         explicit[rel] =
                             relField.type === "User"
                                 ? {
-                                      select: {
-                                          id: true,
-                                          email: true,
-                                          name: true,
-                                          role: true,
-                                      },
-                                  }
+                                    select: {
+                                        id: true,
+                                        email: true,
+                                        name: true,
+                                        role: true,
+                                    },
+                                }
                                 : true;
                     }
                 }

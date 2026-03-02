@@ -29,19 +29,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
-    // On mount: attempt silent refresh using the HttpOnly cookie via centralized API logic.
+    // On mount: attempt to recover session.
+    // The centralized api.ts logic handles the 401 -> refresh flow automatically.
     useEffect(() => {
-        (async () => {
+        const initAuth = async () => {
             try {
-                // Rely on the standard API logic to recover session
                 const res = await api.get<{ user: User }>("/auth/me");
                 setUser(res.user);
-            } catch {
-                // Not logged in or expired
+            } catch (err) {
+                // Initial session recovery failed - user stays null
             } finally {
                 setIsLoading(false);
             }
-        })();
+        };
+        initAuth();
     }, []);
 
     const login = useCallback(async (email: string, password: string) => {

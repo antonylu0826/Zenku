@@ -40,10 +40,11 @@ function generateRefreshToken(): string {
 }
 
 function setRefreshCookie(c: any, token: string, maxAgeSec: number): void {
+    const isProd = config.NODE_ENV === "production";
     setCookie(c, REFRESH_COOKIE_NAME, token, {
         httpOnly: true,
         sameSite: "Lax",
-        secure: config.NODE_ENV === "production",
+        secure: isProd,
         maxAge: maxAgeSec,
         path: "/",
     });
@@ -177,23 +178,32 @@ authRoutes.post("/register", async (c) => {
 
 // Refresh access token using HttpOnly cookie
 authRoutes.post("/refresh", async (c) => {
-    const rawToken = getCookie(c, REFRESH_COOKIE_NAME);
+    const rawCookieHeader = c.req.header("Cookie") || "";
+    const cookies = rawCookieHeader.split(";").map(s => s.trim());
+    const tokenCandidates = cookies
+        .filter(s => s.startsWith(`${REFRESH_COOKIE_NAME}=`))
+        .map(s => s.split("=")[1]);
 
-    if (!rawToken) {
-        return c.json(
-            { error: { code: "UNAUTHORIZED", message: "No refresh token" } },
-            401,
-        );
+    if (tokenCandidates.length === 0) {
+        return c.json({ error: { code: "UNAUTHORIZED", message: "No refresh token" } }, 401);
     }
 
-    const stored = await prisma.refreshToken.findUnique({
-        where: { token: rawToken },
-        include: {
-            user: { select: { id: true, email: true, name: true, role: true } },
-        },
-    });
+    let stored = null;
+    let validToken = null;
 
-    if (!stored) {
+    // Try each candidate until one is found in DB
+    for (const token of tokenCandidates) {
+        stored = await prisma.refreshToken.findUnique({
+            where: { token },
+            include: { user: { select: { id: true, email: true, name: true, role: true } } },
+        });
+        if (stored) {
+            validToken = token;
+            break;
+        }
+    }
+
+    if (!stored || !validToken) {
         // Token not found — possible reuse attack; clear cookie defensively
         clearRefreshCookie(c);
         return c.json(

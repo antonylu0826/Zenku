@@ -32,17 +32,18 @@ export function getAccessToken(): string | null {
 }
 
 async function refreshAccessToken(): Promise<string | null> {
-    // If a refresh is already in flight, wait for it instead of starting another
     if (_refreshPromise) {
         return _refreshPromise;
     }
 
     _refreshPromise = (async () => {
         try {
+            console.debug("🔄 Attempting silent refresh...");
             const res = await fetch(`${BASE_URL}/auth/refresh`, {
                 method: "POST",
-                credentials: "include", // Send the HttpOnly refresh cookie
+                credentials: "include",
                 headers: { "Content-Type": "application/json" },
+                body: "{}", // Providing an empty body for better compatibility
             });
 
             if (!res.ok) {
@@ -53,6 +54,10 @@ async function refreshAccessToken(): Promise<string | null> {
             const data = (await res.json()) as { token: string };
             _accessToken = data.token;
             return data.token;
+        } catch (err) {
+            console.error("🚨 Network error during refresh:", err);
+            _accessToken = null;
+            return null;
         } finally {
             _refreshPromise = null;
         }
@@ -75,15 +80,20 @@ async function request<T>(
     const res = await fetch(`${BASE_URL}${path}`, {
         ...options,
         headers,
-        credentials: "include", // Required for HttpOnly cookie forwarding via Vite proxy
+        credentials: "include",
     });
 
     if (res.status === 401 && !isRetry) {
         const newToken = await refreshAccessToken();
         if (newToken) {
-            return request<T>(path, options, true);
+            return request<T>(path, {
+                ...options,
+                headers: {
+                    ...options.headers,
+                    Authorization: `Bearer ${newToken}`
+                }
+            }, true);
         }
-        // Refresh failed — fall through to throw the 401 error
     }
 
     if (!res.ok) {
