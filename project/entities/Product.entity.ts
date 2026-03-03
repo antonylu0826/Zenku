@@ -2,63 +2,44 @@ import { defineEntity } from '@zenku/core'
 
 export default defineEntity({
   fields: {
-    code:          { type: 'String', required: true, unique: true },
-    barcode:       { type: 'String', optional: true },
-    spec:          { type: 'String', optional: true },
-    size:          { type: 'String', optional: true },
-    name:          { type: 'String', required: true },
-    price:         { type: 'Float',  required: true },
-    stockQuantity: { type: 'Int',    default: 0 },
-    totalValue:    { type: 'Float',  optional: true, computed: true, formula: 'price * stockQuantity' },
-    description:   { type: 'String', optional: true },
-    isPublic:      { type: 'Boolean', default: true },
-    categoryId:    { type: 'String', required: true },
-    ownerId:       { type: 'String', required: true },
+    name: { type: 'String', required: true, length: 100 },
+    price: { type: 'Float', required: true, format: 'C2' },
+    sku: { type: 'String', optional: true, unique: true },
+    status: { type: 'String', enum: 'ProductStatus', default: 'ACTIVE' },
+    categoryId: { type: 'String', required: true },
   },
 
   relations: {
-    category:              { type: 'Category', field: 'categoryId', lookupField: 'name' },
-    owner:                 { type: 'User',     field: 'ownerId' },
-    purchaseOrderItems:    { type: 'PurchaseOrderItem', isList: true },
-    salesOrderItems:       { type: 'SalesOrderItem', isList: true },
-    inventoryTransactions: { type: 'InventoryTransaction', isList: true },
+    category: { type: 'Category', field: 'categoryId', lookupField: 'name' },
+  },
+
+  enums: {
+    ProductStatus: ['ACTIVE', 'INACTIVE', 'DISCONTINUED'],
   },
 
   access: {
-    read:   'auth().role == ADMIN || isPublic',
-    create: "auth().role == ADMIN",
-    update: "auth().role == ADMIN",
-    delete: "auth().role == ADMIN",
+    read: 'auth() != null',
+    create: "auth().role == 'ADMIN'",
+    update: "auth().role == 'ADMIN'",
+    delete: "auth().role == 'ADMIN'",
   },
+
+  hooks: {},
 
   ui: {
     icon: 'Package',
     defaultView: 'list',
-
-    fields: {
-      price:       { component: 'CurrencyField' },
-      description: { component: 'TextareaField' },
-      spec:        { component: 'TextareaField' },
-    },
-
     list: {
-      columns:    ['name', 'barcode', 'spec', 'size', 'price', 'category'],
-      searchable: ['name'],
-      defaultSort: { field: 'name', dir: 'asc' },
+      columns: ['name', 'sku', 'price', 'status', 'category'],
+      searchable: ['name', 'sku'],
+      filterable: ['status', 'categoryId'],
     },
-
     form: {
       sections: [
         {
-          title: 'Basic Info',
-          i18n:  { en: 'Basic Info', 'zh-TW': '基本資料' },
-          fields: [['name', 'code'], ['barcode', 'size'], ['price', 'categoryId'], ['spec']],
-        },
-        {
-          title: 'Description',
-          i18n:  { en: 'Description', 'zh-TW': '說明' },
-          fields: [['description']],
-          collapsible: true,
+          title: 'Product Info',
+          i18n: { en: 'Product Info', 'zh-TW': '產品資訊' },
+          fields: [['name', 'sku'], ['price', 'status'], ['categoryId']],
         },
       ],
     },
@@ -67,42 +48,24 @@ export default defineEntity({
   i18n: {
     en: {
       caption: 'Product',
-      plural:  'Products',
+      plural: 'Products',
       fields: {
-        code:          'Product Code',
-        barcode:       'Barcode',
-        spec:          'Spec',
-        size:          'Size',
-        name:          'Product Name',
-        price:         'Price',
-        stockQuantity: 'Stock Quantity',
-        totalValue:    'Total Value',
-        description:   'Description',
-        isPublic:      'Is Public',
-        categoryId:    'Category',
-        category:      'Category',
-        ownerId:       'Owner',
-        owner:         'Owner',
+        name: 'Name',
+        price: 'Price',
+        sku: 'SKU',
+        status: 'Status',
+        categoryId: 'Category'
       },
     },
     'zh-TW': {
       caption: '產品',
-      plural:  '產品',
+      plural: '產品',
       fields: {
-        code:          '產品代碼',
-        barcode:       '條碼',
-        spec:          '規格',
-        size:          '尺寸',
-        name:          '產品名稱',
-        price:         '價格',
-        stockQuantity: '庫存數量',
-        totalValue:    '總價值',
-        description:   '描述',
-        isPublic:      '是否公開',
-        categoryId:    '分類編號',
-        category:      '產品分類',
-        ownerId:       '擁有者編號',
-        owner:         '擁有者',
+        name: '名稱',
+        price: '價格',
+        sku: '編號',
+        status: '狀態',
+        categoryId: '分類'
       },
     },
   },
