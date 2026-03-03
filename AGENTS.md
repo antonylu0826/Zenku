@@ -14,6 +14,8 @@ This project uses Zenku P12 Single Source of Truth architecture.
 bun packages/cli/src/index.ts scaffold <EntityName>  # Create template
 bun packages/cli/src/index.ts check                  # Validate
 bun packages/cli/src/index.ts generate               # Generate schema
+bun packages/cli/src/index.ts cleanup --all          # Clean
+bun packages/cli/src/index.ts cleanup --init         # Reset project
 bun packages/cli/src/index.ts dev                    # Start dev servers
 ```
 

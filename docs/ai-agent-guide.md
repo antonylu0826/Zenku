@@ -44,10 +44,13 @@ bun packages/cli/src/index.ts scaffold Invoice
 # 3. Validate
 bun packages/cli/src/index.ts check
 
-# 4. Generate schema + DB
-bun packages/cli/src/index.ts generate
+4. **Cleanup / Reset**: Clean artifacts or reset project.
+   ```bash
+   bun packages/cli/src/index.ts cleanup --all
+   bun packages/cli/src/index.ts cleanup --init  # DANGER: Resets project source
+   ```
 
-# 5. Start dev server
+5. **Start dev server**
 bun packages/cli/src/index.ts dev
 # → Server: http://localhost:3000
 # → Client: http://localhost:5173
@@ -219,7 +222,7 @@ export default defineEntity({
 | `zenku generate` | Generate schema.zmodel + run zenstack generate |
 | `zenku dev` | Watch + generate + start server & client |
 | `zenku start` | Production: generate + build + start |
-| `zenku cleanup [--db] [--all]` | Clean generated files |
+| `zenku cleanup [--db] [--all] [--init]` | Clean generated files / Reset project |
 
 ## System Models
 
