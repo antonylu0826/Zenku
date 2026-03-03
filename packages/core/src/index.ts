@@ -285,10 +285,6 @@ export interface AppInfoDefinition {
   name: string;
   icon?: string;
   i18n?: Record<string, { name: string }>;
-  database?: {
-    provider: "sqlite" | "postgresql";
-    url: string;
-  };
   defaultLanguage?: string;
   availableLanguages?: string[];
 }

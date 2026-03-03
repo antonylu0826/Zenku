@@ -13,10 +13,7 @@ import {
 let adminToken = "";
 let userToken = "";
 let testCategoryId = "";
-let publicProductId = "";
-let privateProductId = "";
-let adminUserId = "";
-let testUserId = "";
+let testProductId = "";
 
 beforeAll(async () => {
     await clearEntities();
@@ -24,11 +21,9 @@ beforeAll(async () => {
     // Login as admin and user
     const admin = await loginAs(ADMIN.email, ADMIN.password);
     adminToken = admin.token;
-    adminUserId = admin.user.id;
 
     const user = await loginAs(USER.email, USER.password);
     userToken = user.token;
-    testUserId = user.user.id;
 
     // Create a category (admin only)
     const catRes = await app.fetch(
@@ -39,35 +34,18 @@ beforeAll(async () => {
     const cat = (await catRes.json()) as any;
     testCategoryId = cat.id;
 
-    // Create a public product
-    const pubRes = await app.fetch(
+    // Create a product
+    const prodRes = await app.fetch(
         authedReq("POST", "/api/product", adminToken, {
-            code: "PUB-001",
-            name: "Public Product",
-            price: 10.0,
-            stockQuantity: 5,
-            isPublic: true,
-            categoryId: testCategoryId,
-            ownerId: adminUserId,
-        }),
-    );
-    const pub = (await pubRes.json()) as any;
-    publicProductId = pub.id;
-
-    // Create a private product
-    const privRes = await app.fetch(
-        authedReq("POST", "/api/product", adminToken, {
-            code: "PRV-001",
-            name: "Private Product",
+            name: "PolicyTest-Product",
             price: 99.0,
-            stockQuantity: 1,
-            isPublic: false,
+            sku: "POL-001",
+            status: "ACTIVE",
             categoryId: testCategoryId,
-            ownerId: adminUserId,
         }),
     );
-    const priv = (await privRes.json()) as any;
-    privateProductId = priv.id;
+    const prod = (await prodRes.json()) as any;
+    testProductId = prod.id;
 });
 
 afterAll(async () => {
@@ -126,46 +104,37 @@ describe("Category — ADMIN-only write", () => {
 // ---------------------------------------------------------------------------
 // Product policies
 // ---------------------------------------------------------------------------
-describe("Product — read by policy, ADMIN-only write", () => {
-    test("unauthenticated list returns only public products", async () => {
+describe("Product — auth required to read, ADMIN-only write", () => {
+    test("unauthenticated list returns 200 with empty data (ZenStack filters all)", async () => {
         const res = await app.fetch(req("GET", "/api/product"));
         expect(res.status).toBe(200);
         const data = (await res.json()) as any;
-        const ids: string[] = data.data.map((r: any) => r.id);
-        expect(ids).toContain(publicProductId);
-        expect(ids).not.toContain(privateProductId);
+        expect(data.total).toBe(0);
     });
 
-    test("USER list returns only public products (private filtered out)", async () => {
+    test("USER can list products (200)", async () => {
         const res = await app.fetch(authedReq("GET", "/api/product", userToken));
         expect(res.status).toBe(200);
         const data = (await res.json()) as any;
-        const ids: string[] = data.data.map((r: any) => r.id);
-        expect(ids).toContain(publicProductId);
-        expect(ids).not.toContain(privateProductId);
+        expect(Array.isArray(data.data)).toBe(true);
     });
 
-    test("ADMIN list returns all products including private", async () => {
+    test("ADMIN can list products (200)", async () => {
         const res = await app.fetch(
             authedReq("GET", "/api/product", adminToken),
         );
         expect(res.status).toBe(200);
         const data = (await res.json()) as any;
         const ids: string[] = data.data.map((r: any) => r.id);
-        expect(ids).toContain(publicProductId);
-        expect(ids).toContain(privateProductId);
+        expect(ids).toContain(testProductId);
     });
 
     test("USER cannot create product (non-2xx)", async () => {
         const res = await app.fetch(
             authedReq("POST", "/api/product", userToken, {
-                code: "USR-001",
                 name: "User Product",
                 price: 5.0,
-                stockQuantity: 1,
-                isPublic: true,
                 categoryId: testCategoryId,
-                ownerId: testUserId,
             }),
         );
         expect(res.status).not.toBeWithin(200, 299);
@@ -174,13 +143,9 @@ describe("Product — read by policy, ADMIN-only write", () => {
     test("ADMIN can create product (201)", async () => {
         const res = await app.fetch(
             authedReq("POST", "/api/product", adminToken, {
-                code: "ADM-002",
                 name: "Admin Product 2",
                 price: 20.0,
-                stockQuantity: 10,
-                isPublic: true,
                 categoryId: testCategoryId,
-                ownerId: adminUserId,
             }),
         );
         expect(res.status).toBe(201);
@@ -190,7 +155,7 @@ describe("Product — read by policy, ADMIN-only write", () => {
         const res = await app.fetch(
             authedReq(
                 "DELETE",
-                `/api/product/${publicProductId}`,
+                `/api/product/${testProductId}`,
                 userToken,
             ),
         );
@@ -201,13 +166,9 @@ describe("Product — read by policy, ADMIN-only write", () => {
         // Create a product just to delete it
         const createRes = await app.fetch(
             authedReq("POST", "/api/product", adminToken, {
-                code: "DEL-001",
                 name: "Delete Me",
                 price: 1.0,
-                stockQuantity: 1,
-                isPublic: true,
                 categoryId: testCategoryId,
-                ownerId: adminUserId,
             }),
         );
         const { id } = (await createRes.json()) as any;

@@ -227,6 +227,17 @@ export function generateSchemaContent(entities: EntityEntry[], baseSchemaPath?: 
     // Strip leading comments
     baseContent = baseContent.replace(/^\/\/.*\r?\n/gm, "").trim();
 
+    // Set provider from DB_PROVIDER env var (explicit) or fall back to sniffing DATABASE_URL
+    const dbProvider = process.env.DB_PROVIDER;
+    const dbUrl = process.env.DATABASE_URL ?? "";
+    const isPostgres =
+      dbProvider === "postgresql" ||
+      dbUrl.startsWith("postgresql://") ||
+      dbUrl.startsWith("postgres://");
+    if (isPostgres) {
+      baseContent = baseContent.replace(/provider\s*=\s*"sqlite"/, `provider = "postgresql"`);
+    }
+
     // Inject reverse relations into User model based on entity definitions
     const userReverseRelations: string[] = [];
     for (const entry of entities) {
@@ -298,6 +309,18 @@ export function generateSchemaContent(entities: EntityEntry[], baseSchemaPath?: 
 }
 
 async function runGenerate() {
+  // Load root .env so DATABASE_URL is available for provider auto-detection
+  const rootEnv = join(ROOT, ".env");
+  if (existsSync(rootEnv)) {
+    const envContent = readFileSync(rootEnv, "utf-8");
+    for (const line of envContent.split(/\r?\n/)) {
+      const match = line.match(/^([A-Z_]+)\s*=\s*"?([^"#\n]*)"?/);
+      if (match && !process.env[match[1]]) {
+        process.env[match[1]] = match[2].trim();
+      }
+    }
+  }
+
   console.log("[generate] Loading entities...");
   const entities = await loadEntities();
   console.log(`[generate] Found ${entities.length} entities`);

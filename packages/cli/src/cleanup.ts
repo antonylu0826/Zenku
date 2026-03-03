@@ -85,10 +85,6 @@ export const cleanupCommand = new Command("cleanup")
 
 export default defineAppInfo({
   name: 'New Zenku App',
-  database: {
-    provider: 'sqlite',
-    url: 'env("DATABASE_URL")',
-  },
   defaultLanguage: 'zh-TW',
   availableLanguages: ['en', 'zh-TW'],
 })

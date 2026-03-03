@@ -4,12 +4,12 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "bun run --watch src/index.ts",
-    "start": "bun run src/index.ts",
-    "seed": "bun run src/seed.ts",
+    "dev": "bun --env-file=../../.env run --watch src/index.ts",
+    "start": "bun --env-file=../../.env run src/index.ts",
+    "seed": "bun --env-file=../../.env run src/seed.ts",
     "gen": "zenstack generate && prisma generate",
-    "db-push": "bun x prisma db push --accept-data-loss",
-    "test": "NODE_ENV=test JWT_SECRET=test-secret-at-least-32-chars-long bun test tests/",
+    "db-push": "bunx prisma db push --env-file=../../.env --accept-data-loss",
+    "test": "NODE_ENV=test JWT_SECRET=test-secret-at-least-32-chars-long bun test --env-file=../../.env tests/",
     "eject": "bun run src/eject.ts"
   },
   "dependencies": {
