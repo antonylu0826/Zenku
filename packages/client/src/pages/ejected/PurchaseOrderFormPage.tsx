@@ -43,11 +43,15 @@ export default function PurchaseOrderFormPage({ entityId, onNavigate }: Props) {
     const { data: suppliersData } = useEntityList("supplier", { pageSize: 1000 } as any);
     const suppliers = suppliersData?.data || [];
 
+    const { data: warehousesData } = useEntityList("warehouse", { pageSize: 1000 } as any);
+    const warehouses = warehousesData?.data || [];
+
     const createMutation = useEntityCreate("purchaseOrder");
     const updateMutation = useEntityUpdate("purchaseOrder");
 
     const [orderNumber, setOrderNumber] = useState<string>("");
     const [supplierId, setSupplierId] = useState<string>("");
+    const [warehouseId, setWarehouseId] = useState<string>("");
     const [notes, setNotes] = useState<string>("");
     const [items, setItems] = useState<OrderItem[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -56,6 +60,7 @@ export default function PurchaseOrderFormPage({ entityId, onNavigate }: Props) {
         if (isEdit && existing) {
             setOrderNumber((existing as any).orderNumber || "");
             setSupplierId((existing as any).supplierId || "");
+            setWarehouseId((existing as any).warehouseId || "");
             setNotes((existing as any).notes || "");
             if ((existing as any).items) {
                 setItems((existing as any).items.map((item: any) => ({
@@ -112,14 +117,16 @@ export default function PurchaseOrderFormPage({ entityId, onNavigate }: Props) {
                     create: items.filter(i => !i.id).map(i => ({
                         productId: i.productId,
                         quantity: i.quantity,
-                        unitPrice: i.unitPrice
+                        unitPrice: i.unitPrice,
+                        amount: i.totalPrice
                     })),
                     update: items.filter(i => i.id).map(i => ({
                         where: { id: i.id },
                         data: {
                             productId: i.productId,
                             quantity: i.quantity,
-                            unitPrice: i.unitPrice
+                            unitPrice: i.unitPrice,
+                            amount: i.totalPrice
                         }
                     }))
                 }
@@ -127,13 +134,15 @@ export default function PurchaseOrderFormPage({ entityId, onNavigate }: Props) {
                     create: items.map(i => ({
                         productId: i.productId,
                         quantity: i.quantity,
-                        unitPrice: i.unitPrice
+                        unitPrice: i.unitPrice,
+                        amount: i.totalPrice
                     }))
                 };
 
             const payload = {
                 orderNumber,
                 supplierId: supplierId || null,
+                warehouseId: warehouseId || null,
                 notes,
                 totalAmount: Math.round(totalAmount * 100) / 100,
                 ownerId: user?.id,
@@ -198,6 +207,21 @@ export default function PurchaseOrderFormPage({ entityId, onNavigate }: Props) {
                                     {suppliers.map(s => (
                                         <SelectItem key={String(s.id)} value={String(s.id)}>
                                             {(s as any).name} ({(s as any).code || "無編號"})
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="warehouse">入庫倉庫</Label>
+                            <Select key={`warehouse-${warehouseId}`} value={warehouseId} onValueChange={setWarehouseId}>
+                                <SelectTrigger id="warehouse">
+                                    <SelectValue placeholder="選擇倉庫" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {warehouses.map(w => (
+                                        <SelectItem key={String(w.id)} value={String(w.id)}>
+                                            {(w as any).name}
                                         </SelectItem>
                                     ))}
                                 </SelectContent>

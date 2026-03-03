@@ -50,8 +50,17 @@ bun packages/cli/src/index.ts check
    bun packages/cli/src/index.ts cleanup --init  # DANGER: Resets project source
    ```
 
+4. **Generate & Sync**: Generate schema and sync database structure.
+   ```bash
+   bun packages/cli/src/index.ts generate
+   # ⚠️ IMPORTANT: Must sync database after modifying entities
+   bun x prisma db push --schema=packages/server/prisma/schema.prisma
+   ```
+
 5. **Start dev server**
-bun packages/cli/src/index.ts dev
+   ```bash
+   bun packages/cli/src/index.ts dev
+   ```
 # → Server: http://localhost:3000
 # → Client: http://localhost:5173
 ```
