@@ -48,10 +48,21 @@ export function authedReq(
     return req(method, path, body, { Authorization: `Bearer ${token}` });
 }
 
-/** Delete all test entities (products and categories), leave users intact */
+/** Delete all test entities, leave users intact. Order: children before parents. */
 export async function clearEntities(): Promise<void> {
+    await prisma.purchaseOrderItem.deleteMany();
+    await prisma.salesOrderItem.deleteMany();
+    await prisma.inventoryTransaction.deleteMany();
+    await prisma.purchaseOrder.deleteMany();
+    await prisma.salesOrder.deleteMany();
+    await prisma.attachment.deleteMany();
     await prisma.product.deleteMany();
     await prisma.category.deleteMany();
+    await prisma.supplier.deleteMany();
+    await prisma.customer.deleteMany();
+    await prisma.warehouse.deleteMany();
+    await prisma.event.deleteMany();
+    await prisma.task.deleteMany();
 }
 
 /** Seed accounts (from seed.ts) */

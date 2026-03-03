@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useSchema } from "../hooks/useSchema";
 import { useAuth } from "../hooks/useAuth";
 import type { ReactNode } from "react";
+import type { MenuGroupDefinition, ExtendedModelMeta } from "@zenku/core";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -19,6 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Zap,
   ChevronRight,
+  ChevronDown,
   LogOut,
   User,
   ChevronLeft,
@@ -39,10 +41,119 @@ export default function AppLayout({ children, currentEntity, onNavigate }: Props
   const { data: schema } = useSchema();
   const { user, logout } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const { t, i18n } = useTranslation();
   const { tEntityPlural } = useEntityTranslation();
 
   const currentModel = schema?.models.find((m) => m.name === currentEntity);
+  const menu = schema?.menu;
+  const appInfo = schema?.appInfo;
+  const appName = appInfo?.i18n?.[i18n.language]?.name ?? appInfo?.name ?? "Zenku";
+
+  const toggleGroup = (label: string) => {
+    setExpandedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(label)) next.delete(label);
+      else next.add(label);
+      return next;
+    });
+  };
+
+  const getMenuGroupLabel = (group: MenuGroupDefinition) => {
+    return group.i18n?.[i18n.language] ?? group.i18n?.en ?? group.label;
+  };
+
+  /** Render a single entity nav item */
+  const renderEntityItem = (model: ExtendedModelMeta, nested = false) => {
+    const path = model.name.charAt(0).toLowerCase() + model.name.slice(1);
+    const isActive = currentEntity === model.name;
+    return (
+      <Button
+        key={model.name}
+        variant={isActive ? "secondary" : "ghost"}
+        size="sm"
+        className={cn(
+          "w-full justify-start gap-2 font-normal",
+          collapsed && "justify-center px-0",
+          nested && !collapsed && "pl-8",
+          isActive && "font-medium"
+        )}
+        onClick={() => onNavigate(`/${path}`)}
+        title={collapsed ? tEntityPlural(model) : undefined}
+      >
+        {(() => {
+          const Icon = resolveIcon(model.ui?.icon);
+          return <Icon className="h-4 w-4 shrink-0" />;
+        })()}
+        {!collapsed && (
+          <span className="truncate">{tEntityPlural(model)}</span>
+        )}
+      </Button>
+    );
+  };
+
+  /** Render nav — grouped (P12 menu.ts) or flat (legacy) */
+  const renderNav = () => {
+    if (menu && menu.length > 0) {
+      // P12: menu groups with sub-items
+      return menu.map((group) => {
+        // Role-based access
+        if (group.roles && user?.role && !group.roles.includes(user.role)) {
+          return null;
+        }
+
+        const groupEntities = group.items
+          .map((item) => {
+            if (item.entity) {
+              return schema?.models.find((m) => m.name === item.entity);
+            }
+            return null;
+          })
+          .filter(Boolean) as ExtendedModelMeta[];
+
+        if (groupEntities.length === 0) return null;
+
+        const isExpanded = expandedGroups.has(group.label);
+        const hasActiveChild = groupEntities.some((m) => m.name === currentEntity);
+
+        // Auto-expand group containing active entity
+        const shouldShow = isExpanded || hasActiveChild;
+
+        if (collapsed) {
+          // In collapsed mode, show only entity items (no groups)
+          return groupEntities.map((model) => renderEntityItem(model));
+        }
+
+        const GroupIcon = resolveIcon(group.icon);
+
+        return (
+          <div key={group.label} className="space-y-0.5">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full justify-start gap-2 font-normal text-muted-foreground hover:text-foreground"
+              onClick={() => toggleGroup(group.label)}
+            >
+              <GroupIcon className="h-4 w-4 shrink-0" />
+              <span className="truncate text-xs font-medium uppercase tracking-wider">
+                {getMenuGroupLabel(group)}
+              </span>
+              {shouldShow ? (
+                <ChevronDown className="h-3 w-3 ml-auto shrink-0" />
+              ) : (
+                <ChevronRight className="h-3 w-3 ml-auto shrink-0" />
+              )}
+            </Button>
+            {shouldShow &&
+              groupEntities.map((model) => renderEntityItem(model, true))}
+          </div>
+        );
+      });
+    }
+
+    // Legacy: flat list of all models
+    return schema?.models.map((model) => renderEntityItem(model));
+  };
 
   return (
     <div className="flex h-screen bg-background overflow-hidden">
@@ -65,39 +176,13 @@ export default function AppLayout({ children, currentEntity, onNavigate }: Props
             <Zap className="h-4 w-4" />
           </div>
           {!collapsed && (
-            <span className="font-semibold text-sm tracking-tight">Zenku</span>
+            <span className="font-semibold text-sm tracking-tight">{appName}</span>
           )}
         </div>
 
         {/* Nav items */}
         <nav className="flex-1 overflow-y-auto py-2 px-2 space-y-0.5">
-          {schema?.models.map((model) => {
-            const path =
-              model.name.charAt(0).toLowerCase() + model.name.slice(1);
-            const isActive = currentEntity === model.name;
-            return (
-              <Button
-                key={model.name}
-                variant={isActive ? "secondary" : "ghost"}
-                size="sm"
-                className={cn(
-                  "w-full justify-start gap-2 font-normal",
-                  collapsed && "justify-center px-0",
-                  isActive && "font-medium"
-                )}
-                onClick={() => onNavigate(`/${path}`)}
-                title={collapsed ? tEntityPlural(model) : undefined}
-              >
-                {(() => {
-                  const Icon = resolveIcon(model.ui?.icon);
-                  return <Icon className="h-4 w-4 shrink-0" />;
-                })()}
-                {!collapsed && (
-                  <span className="truncate">{tEntityPlural(model)}</span>
-                )}
-              </Button>
-            );
-          })}
+          {renderNav()}
         </nav>
 
         <Separator />
@@ -152,18 +237,15 @@ export default function AppLayout({ children, currentEntity, onNavigate }: Props
                   <span>{t("language.label")}</span>
                 </DropdownMenuSubTrigger>
                 <DropdownMenuSubContent>
-                  <DropdownMenuItem
-                    onClick={() => i18n.changeLanguage("en")}
-                    className={cn(i18n.language === "en" && "font-semibold")}
-                  >
-                    {t("language.en")}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => i18n.changeLanguage("zh-TW")}
-                    className={cn(i18n.language === "zh-TW" && "font-semibold")}
-                  >
-                    {t("language.zhTW")}
-                  </DropdownMenuItem>
+                  {(appInfo?.availableLanguages ?? ["en", "zh-TW"]).map((lang) => (
+                    <DropdownMenuItem
+                      key={lang}
+                      onClick={() => i18n.changeLanguage(lang)}
+                      className={cn(i18n.language === lang && "font-semibold")}
+                    >
+                      {t(`language.${lang === "zh-TW" ? "zhTW" : lang}`)}
+                    </DropdownMenuItem>
+                  ))}
                 </DropdownMenuSubContent>
               </DropdownMenuSub>
               <DropdownMenuSeparator />

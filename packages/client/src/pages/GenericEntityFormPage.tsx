@@ -187,7 +187,7 @@ export default function GenericEntityFormPage({
   entityId,
   onNavigate,
 }: Props) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { tEntityName, tEntityField } = useEntityTranslation();
   const meta = useModelMeta(entityName);
   const entityPath = entityName.charAt(0).toLowerCase() + entityName.slice(1);
@@ -243,30 +243,56 @@ export default function GenericEntityFormPage({
     );
   }
 
-  // Build editable fields list:
-  // If UiConfig specifies form.layout, use that order (skipping id/auto fields)
-  // Otherwise: fallback to all non-id, non-relation, non-auto fields
+  // P12: Support form sections from entity definitions
+  const uiSections = meta.ui?.form?.sections;
   const uiLayout = meta.ui?.form?.layout;
-  const editableFields = uiLayout
-    ? uiLayout
-      .map((item) => meta.fields.find((f) => f.name === item.field))
-      .filter(
-        (f): f is NonNullable<typeof f> =>
-          f !== undefined &&
+
+  // Collect all field names referenced in sections for the submit handler
+  const sectionFieldNames = new Set<string>();
+  if (uiSections) {
+    for (const section of uiSections) {
+      if (section.fields) {
+        for (const row of section.fields) {
+          for (const fname of row) {
+            sectionFieldNames.add(fname);
+          }
+        }
+      }
+    }
+  }
+
+  // Build editable fields list (flat):
+  // If sections exist, collect from sections; else use layout or auto-detect
+  const editableFields = uiSections
+    ? meta.fields.filter(
+        (f) =>
+          sectionFieldNames.has(f.name) &&
           !f.isId &&
           !f.isList &&
           f.name !== "createdAt" &&
           f.name !== "updatedAt" &&
           !f.isRelation
       )
-    : meta.fields.filter(
-      (f) =>
-        !f.isId &&
-        !f.isList &&
-        f.name !== "createdAt" &&
-        f.name !== "updatedAt" &&
-        !f.isRelation
-    );
+    : uiLayout
+      ? uiLayout
+          .map((item) => meta.fields.find((f) => f.name === item.field))
+          .filter(
+            (f): f is NonNullable<typeof f> =>
+              f !== undefined &&
+              !f.isId &&
+              !f.isList &&
+              f.name !== "createdAt" &&
+              f.name !== "updatedAt" &&
+              !f.isRelation
+          )
+      : meta.fields.filter(
+          (f) =>
+            !f.isId &&
+            !f.isList &&
+            f.name !== "createdAt" &&
+            f.name !== "updatedAt" &&
+            !f.isRelation
+        );
 
   // Helper to get ui layout config for a field
   const getFieldLayout = (fieldName: string) =>
@@ -353,86 +379,143 @@ export default function GenericEntityFormPage({
         </div>
       )}
 
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base">
-            {isEdit
-              ? t("form.editTitle", {
-                entity: tEntityName(meta),
-              })
-              : t("form.createTitle", {
-                entity: tEntityName(meta),
-              })}
-          </CardTitle>
-          <CardDescription>
-            {t("form.required")}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {editableFields.map((field) => {
-              const relSelector = relationSelectors.find((r) => r.fkField === field.name);
-              const errs = fieldErrors[field.name];
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {uiSections ? (
+          /* P12: Render form as sections */
+          uiSections.filter(s => !s.detail).map((section, si) => {
+            const sectionTitle = section.i18n?.[i18n.language] ?? section.i18n?.en ?? section.title;
+            return (
+              <Card key={si}>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">{sectionTitle}</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {section.fields?.map((row, ri) => (
+                    <div key={ri} className={`grid gap-4 ${row.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                      {row.map((fname) => {
+                        const field = meta.fields.find(f => f.name === fname);
+                        if (!field) return null;
+                        const relSelector = relationSelectors.find((r) => r.fkField === fname);
+                        const errs = fieldErrors[fname];
 
-              return (
-                <div key={field.name} className="space-y-1.5">
-                  <Label
-                    htmlFor={field.name}
-                    className={field.type === "Boolean" ? "sr-only" : ""}
-                  >
-                    {tEntityField(meta, field.name)}
-                    {field.isRequired && (
-                      <span className="text-destructive ml-1">*</span>
+                        return (
+                          <div key={fname} className="space-y-1.5">
+                            <Label
+                              htmlFor={fname}
+                              className={field.type === "Boolean" ? "sr-only" : ""}
+                            >
+                              {tEntityField(meta, fname)}
+                              {field.isRequired && (
+                                <span className="text-destructive ml-1">*</span>
+                              )}
+                            </Label>
+
+                            {relSelector ? (
+                              <RelationSelect
+                                modelName={relSelector.relationModel}
+                                value={formData[fname] as string}
+                                onChange={(val) => handleChange(fname, val)}
+                                error={errs?.[0]}
+                                t={t}
+                              />
+                            ) : (
+                              <FieldInput
+                                field={field}
+                                value={formData[fname]}
+                                onChange={(val) => handleChange(fname, val)}
+                                error={errs?.[0]}
+                                placeholder={t("form.enterField", { field: tEntityField(meta, fname) })}
+                              />
+                            )}
+
+                            {errs && (
+                              <p className="text-xs text-destructive">{errs[0]}</p>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            );
+          })
+        ) : (
+          /* Legacy: flat field list */
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">
+                {isEdit
+                  ? t("form.editTitle", { entity: tEntityName(meta) })
+                  : t("form.createTitle", { entity: tEntityName(meta) })}
+              </CardTitle>
+              <CardDescription>{t("form.required")}</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              {editableFields.map((field) => {
+                const relSelector = relationSelectors.find((r) => r.fkField === field.name);
+                const errs = fieldErrors[field.name];
+
+                return (
+                  <div key={field.name} className="space-y-1.5">
+                    <Label
+                      htmlFor={field.name}
+                      className={field.type === "Boolean" ? "sr-only" : ""}
+                    >
+                      {tEntityField(meta, field.name)}
+                      {field.isRequired && (
+                        <span className="text-destructive ml-1">*</span>
+                      )}
+                    </Label>
+
+                    {relSelector ? (
+                      <RelationSelect
+                        modelName={relSelector.relationModel}
+                        value={formData[field.name] as string}
+                        onChange={(val) => handleChange(field.name, val)}
+                        error={errs?.[0]}
+                        t={t}
+                      />
+                    ) : (
+                      <FieldInput
+                        field={field}
+                        value={formData[field.name]}
+                        onChange={(val) => handleChange(field.name, val)}
+                        error={errs?.[0]}
+                        placeholder={
+                          getFieldLayout(field.name)?.placeholder
+                            ? t(getFieldLayout(field.name)!.placeholder!)
+                            : t("form.enterField", { field: tEntityField(meta, field.name) })
+                        }
+                      />
                     )}
-                  </Label>
 
-                  {relSelector ? (
-                    <RelationSelect
-                      modelName={relSelector.relationModel}
-                      value={formData[field.name] as string}
-                      onChange={(val) => handleChange(field.name, val)}
-                      error={errs?.[0]}
-                      t={t}
-                    />
-                  ) : (
-                    <FieldInput
-                      field={field}
-                      value={formData[field.name]}
-                      onChange={(val) => handleChange(field.name, val)}
-                      error={errs?.[0]}
-                      placeholder={
-                        getFieldLayout(field.name)?.placeholder
-                          ? t(getFieldLayout(field.name)!.placeholder!)
-                          : t("form.enterField", { field: tEntityField(meta, field.name) })
-                      }
-                    />
-                  )}
+                    {errs && (
+                      <p className="text-xs text-destructive">{errs[0]}</p>
+                    )}
+                  </div>
+                );
+              })}
+            </CardContent>
+          </Card>
+        )}
 
-                  {errs && (
-                    <p className="text-xs text-destructive">{errs[0]}</p>
-                  )}
-                </div>
-              );
-            })}
-
-            <div className="flex gap-2 pt-2 border-t">
-              <Button type="submit" disabled={isSubmitting} className="gap-1.5">
-                <Save className="h-4 w-4" />
-                {isSubmitting ? t("form.saving") : t("common.save")}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onNavigate(`/${entityPath}`)}
-                className="gap-1.5"
-              >
-                <X className="h-4 w-4" />
-                {t("common.cancel")}
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+        <div className="flex gap-2 pt-2">
+          <Button type="submit" disabled={isSubmitting} className="gap-1.5">
+            <Save className="h-4 w-4" />
+            {isSubmitting ? t("form.saving") : t("common.save")}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onNavigate(`/${entityPath}`)}
+            className="gap-1.5"
+          >
+            <X className="h-4 w-4" />
+            {t("common.cancel")}
+          </Button>
+        </div>
+      </form>
     </div>
   );
 }

@@ -1,8 +1,8 @@
 import { useTranslation } from "react-i18next";
 import { useEntityTranslation } from "@/hooks/useEntityTranslation";
 import { useModelMeta } from "../hooks/useSchema";
-import { useEntityDetail, useEntityDelete } from "../hooks/useEntity";
-import type { FieldMeta } from "@zenku/core";
+import { useEntityDetail, useEntityDelete, useEntityList } from "../hooks/useEntity";
+import type { FieldMeta, DetailTab } from "@zenku/core";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -71,7 +71,7 @@ export default function GenericEntityDetailPage({
   entityId,
   onNavigate,
 }: Props) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { tEntityName, tEntityField } = useEntityTranslation();
   const meta = useModelMeta(entityName);
   const entityPath = entityName.charAt(0).toLowerCase() + entityName.slice(1);
@@ -184,7 +184,7 @@ export default function GenericEntityDetailPage({
 
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">{t("auth.profile")}</CardTitle>
+          <CardTitle className="text-base">{t("common.details")}</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           <dl className="divide-y">
@@ -201,6 +201,140 @@ export default function GenericEntityDetailPage({
           </dl>
         </CardContent>
       </Card>
+
+      {/* P12: Detail Tabs — related entity lists */}
+      {meta.ui?.detail?.tabs?.map((tab, ti) => (
+        <DetailTabPanel
+          key={ti}
+          tab={tab}
+          parentId={entityId}
+          parentEntity={entityName}
+          language={i18n.language}
+        />
+      ))}
     </div>
+  );
+}
+
+/** Renders a single detail tab showing related records */
+function DetailTabPanel({
+  tab,
+  parentId,
+  parentEntity,
+  language,
+}: {
+  tab: DetailTab;
+  parentId: string;
+  parentEntity: string;
+  language: string;
+}) {
+  const tabTitle = tab.i18n?.[language] ?? tab.i18n?.en ?? tab.title;
+
+  // Find the related model by looking at the relation
+  // The relation name maps to a field on the parent model with relationModel
+  const parentMeta = useModelMeta(parentEntity);
+  const relationField = parentMeta?.fields.find(
+    (f) => f.name === tab.relation && f.isList && f.relationModel
+  );
+
+  if (!relationField?.relationModel) return null;
+
+  const relatedModelName = relationField.relationModel;
+  const relatedPath = relatedModelName.charAt(0).toLowerCase() + relatedModelName.slice(1);
+
+  // Build filter to find related records (the FK on the child side)
+  // Convention: child has parentEntity + "Id" or "orderId" etc.
+  const fkFieldGuesses = [
+    parentEntity.charAt(0).toLowerCase() + parentEntity.slice(1) + "Id",
+    "orderId",
+  ];
+
+  return (
+    <DetailTabTable
+      title={tabTitle}
+      relatedPath={relatedPath}
+      relatedModelName={relatedModelName}
+      parentId={parentId}
+      columns={tab.columns}
+      fkFieldGuesses={fkFieldGuesses}
+    />
+  );
+}
+
+function DetailTabTable({
+  title,
+  relatedPath,
+  relatedModelName,
+  parentId,
+  columns,
+  fkFieldGuesses,
+}: {
+  title: string;
+  relatedPath: string;
+  relatedModelName: string;
+  parentId: string;
+  columns: string[];
+  fkFieldGuesses: string[];
+}) {
+  const { tEntityField } = useEntityTranslation();
+  const relatedMeta = useModelMeta(relatedModelName);
+
+  // Filter related records by FK
+  const filterField = fkFieldGuesses[0];
+  const { data } = useEntityList(relatedPath, {
+    pageSize: 50,
+    [filterField]: parentId,
+  });
+
+  const records = data?.data ?? [];
+
+  return (
+    <Card className="mt-4">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base">
+          {title} ({records.length})
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="p-0">
+        {records.length === 0 ? (
+          <div className="px-6 py-4 text-sm text-muted-foreground">—</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b bg-muted/50">
+                  {columns.map((col) => (
+                    <th key={col} className="text-left px-4 py-2 font-medium text-muted-foreground">
+                      {relatedMeta ? tEntityField(relatedMeta, col) : col}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {records.map((record: Record<string, unknown>, ri: number) => (
+                  <tr key={ri}>
+                    {columns.map((col) => {
+                      const val = record[col];
+                      // Handle relation objects
+                      if (val && typeof val === "object" && "name" in (val as any)) {
+                        return <td key={col} className="px-4 py-2">{(val as any).name}</td>;
+                      }
+                      if (val && typeof val === "object" && "code" in (val as any)) {
+                        return <td key={col} className="px-4 py-2">{(val as any).code}</td>;
+                      }
+                      return (
+                        <td key={col} className="px-4 py-2">
+                          {val !== null && val !== undefined ? String(val) : "—"}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
